@@ -16,9 +16,15 @@ type Input struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Export contains the string representation of the cue value to run `cue export` against
-	Export        string        `json:"export"`
-	ExportOptions ExportOptions `json:"export_options"`
+	// Export is the input data for the cue export command
+	Export Export `json:"export"`
+}
+
+type Export struct {
+	// Value is the string representation of the cue value to run `cue export` against
+	Value string `json:"value,required"`
+	// Options for `cue export`
+	Options ExportOptions `json:"options,omitempty"`
 }
 
 type ExportOptions struct {

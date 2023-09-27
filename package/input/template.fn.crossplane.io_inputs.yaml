@@ -27,71 +27,78 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           export:
-            description: Export contains the string representation of the cue value
-              to run `cue export` against
-            type: string
-          export_options:
+            description: Export is the input data for the cue export command
             properties:
-              escape:
-                description: Escape use HTML escaping
-                type: boolean
-              expression:
-                description: Expression export only this expression
-                items:
-                  type: string
-                type: array
-              force:
-                description: Force overwriting existing files
-                type: boolean
-              inject:
-                description: Inject set the value of a tagged field
-                items:
-                  type: string
-                type: array
-              inject_vars:
-                description: InjectVars inject system variables in tags
-                items:
-                  type: string
-                type: array
-              list:
-                description: List concatenate multiple objects into a list
-                type: boolean
-              merge:
-                description: Merge non-CUE files (default true)
-                type: boolean
-              name:
-                description: Name glob filter for non-CUE file names in directories
+              options:
+                description: Options for `cue export`
+                properties:
+                  escape:
+                    description: Escape use HTML escaping
+                    type: boolean
+                  expression:
+                    description: Expression export only this expression
+                    items:
+                      type: string
+                    type: array
+                  force:
+                    description: Force overwriting existing files
+                    type: boolean
+                  inject:
+                    description: Inject set the value of a tagged field
+                    items:
+                      type: string
+                    type: array
+                  inject_vars:
+                    description: InjectVars inject system variables in tags
+                    items:
+                      type: string
+                    type: array
+                  list:
+                    description: List concatenate multiple objects into a list
+                    type: boolean
+                  merge:
+                    description: Merge non-CUE files (default true)
+                    type: boolean
+                  name:
+                    description: Name glob filter for non-CUE file names in directories
+                    type: string
+                  out:
+                    description: Out output format (see cue filetypes) for more information
+                    type: string
+                  outfile:
+                    description: Outfile filename or - for stdout with optional file
+                      prefix (run 'cue filetypes' for more info)
+                    type: string
+                  package:
+                    description: Package name for non-CUE files
+                    type: string
+                  path:
+                    description: Path CUE expression for single path component
+                    items:
+                      type: string
+                    type: array
+                  proto_enum:
+                    description: ProtoEnum mode for rendering enums (int|json)
+                    type: string
+                  proto_path:
+                    description: ProtoPath paths in which to search for imports
+                    items:
+                      type: string
+                    type: array
+                  schema:
+                    description: Schema expression to select schema for evaluating
+                      values in non-CUE files
+                    type: string
+                  with_context:
+                    description: WithContext import as object with contextual data
+                    type: boolean
+                type: object
+              value:
+                description: Value is the string representation of the cue value to
+                  run `cue export` against
                 type: string
-              out:
-                description: Out output format (see cue filetypes) for more information
-                type: string
-              outfile:
-                description: Outfile filename or - for stdout with optional file prefix
-                  (run 'cue filetypes' for more info)
-                type: string
-              package:
-                description: Package name for non-CUE files
-                type: string
-              path:
-                description: Path CUE expression for single path component
-                items:
-                  type: string
-                type: array
-              proto_enum:
-                description: ProtoEnum mode for rendering enums (int|json)
-                type: string
-              proto_path:
-                description: ProtoPath paths in which to search for imports
-                items:
-                  type: string
-                type: array
-              schema:
-                description: Schema expression to select schema for evaluating values
-                  in non-CUE files
-                type: string
-              with_context:
-                description: WithContext import as object with contextual data
-                type: boolean
+            required:
+            - value
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -102,7 +109,6 @@ spec:
             type: object
         required:
         - export
-        - export_options
         type: object
     served: true
     storage: true
