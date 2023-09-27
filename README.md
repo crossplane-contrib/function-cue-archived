@@ -46,10 +46,6 @@ spec:
 
 ## Developing a Function
 
-This template doesn't use the typical Crossplane build submodule and Makefile,
-since we'd like Functions to have a less heavyweight developer experience.
-It mostly relies on regular old Go tools:
-
 ```shell
 # Run code generation - see input/generate.go
 $ go generate ./...
