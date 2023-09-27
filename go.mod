@@ -3,6 +3,7 @@ module github.com/crossplane/function-template-go
 go 1.20
 
 require (
+	cuelang.org/go v0.6.0
 	github.com/alecthomas/kong v0.8.0
 	github.com/crossplane/crossplane-runtime v1.13.0
 	github.com/crossplane/function-sdk-go v0.0.0-20230922103031-f53ddfff2511
@@ -14,6 +15,8 @@ require (
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
+	github.com/cockroachdb/apd/v3 v3.2.0 // indirect
+	github.com/emicklei/proto v1.10.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
@@ -21,13 +24,17 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/protocolbuffers/txtpbfmt v0.0.0-20230328191034-3462fbc510c0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
