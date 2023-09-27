@@ -36,7 +36,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	//
 	// Take a look at function-sdk-go for some utilities for working with req
 	// and rsp - https://pkg.go.dev/github.com/crossplane/function-sdk-go
-	response.Normalf(rsp, "I was run with input %q", in.Export)
+	response.Normalf(rsp, "I was run with input %q", in.Export.Value)
 
 	return rsp, nil
 }

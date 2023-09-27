@@ -40,7 +40,9 @@ func TestRunFunction(t *testing.T) {
 					Input: resource.MustStructJSON(`{
 						"apiVersion": "dummy.fn.crossplane.io",
 						"kind": "Input",
-						"example": "Hello, world!"
+						"Export": {
+							"Value": "Hello, world!"
+						}
 					}`),
 				},
 			},
