@@ -1,49 +1,48 @@
-# function-template-go
+# cue-function
 
-A [Crossplane] Composition Function template, for Go.
+A [Crossplane] Composition Function template, for [cuelang](https://cuelang.org/).
 
-## What is this?
+Supports `cue export` based off a string template past into the Compositions `export` field.
 
-This is a template for a [Composition Function][function-design].
+The resulting Export is added to the Desired State of the XR, this will override conflicting values (perhaps this should exit with an error, as this is what cue would do)
 
-Composition Functions let you extend Crossplane with new ways to 'do
-Composition' - i.e. new ways to produce composed resources given a claim or XR.
-You use Composition Functions instead of the `resources` array of templates.
-
-This template creates a beta-style Function. Functions created from this
-template won't work with Crossplane v1.13 or earlier - it targets the
-[implementation of Functions][function-pr] coming with Crossplane v1.14 in late
-October.
-
-Keep in mind what is shown here is __far from the final developer experience__
-we want for Functions! This is the very first iteration - we have to start
-somewhere. We want your feedback - what do you want to see from the developer
-experience? Please [raise a Crossplane issue][crossplane-new-issue] with ideas.
-
-Here's an example of a Composition that uses a Composition Function.
+# Example Composition
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: test-crossplane
+  name: test-cue
 spec:
   compositeTypeRef:
     apiVersion: database.example.com/v1alpha1
     kind: NoSQL
   mode: Pipeline
   pipeline:
-  - step: run-example-function
+  - step: run-cue-function
     functionRef:
-      name: function-example
+      name: function-cue
     input:
       apiVersion: template.fn.crossplane.io/v1beta1
       kind: Input
-      # Add any input fields here!
+      export: |
+        #ENVIRONMENT: "dev"
+        #REGION: "us-east-1"
+
+        metadata: env: #ENVIRONMENT
+        spec: region: #REGION
 ```
 
-Notice that it has a `pipeline` (of Composition Functions) instead of an array
-of `resources`.
+# Installing
+
+```yaml
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-cue
+spec:
+  package: mitsuwa/function-cue:v0.1.0
+```
 
 ## Developing a Function
 
@@ -73,10 +72,6 @@ https://github.com/upbound/up/.
 
 To turn this template into a working Function, the process is:
 
-1. Replace `function-template-go` with your Function's name in
-   `package/crossplane.yaml`, `go.mod`, and any Go imports
-1. Update `input/v1beta1/input.go` to reflect your desired input
-1. Run `go generate ./...`
 1. Add your Function logic to `RunFunction` in `fn.go`
 1. Add tests for your Function logic in `fn_test.go`
 1. Update this file, `README.md`, to be about your Function!
@@ -94,17 +89,6 @@ Then, to try your Function out:
 You can see an example Composition near the beginning of this file. Before you
 can use your Composition you need to install the Function. You can do that by
 creating a manifest like this:
-
-```yaml
-apiVersion: pkg.crossplane.io/v1beta1
-kind: Function
-metadata:
-  # Edit this to reflect the name of your Function.
-  name: function-example
-spec:
-  # Edit this to 
-  package: xpkg.upbound.io/crossplane-contrib:function-example:v0.1.0
-```
 
 Again, keep in mind this is not the final experience! In particular we know the
 development loop to iterate on Functions (code, test, etc) must be smoother.
