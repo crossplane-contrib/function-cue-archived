@@ -1,0 +1,41 @@
+package main
+
+import (
+	"fmt"
+	"testing"
+)
+
+var testTable = []struct {
+	In     cueInputFmt
+	Fn     cueFunction
+	Out    cueOutputFmt
+	InVal  string
+	OutVal string
+	Err    string
+}{
+	{inputCUE, functionExport, outputCUE, "", "\n", ""},
+	{inputCUE, functionExport, outputCUE, "a: b: 5\na: c: 4", "a: {\n\tb: 5\n\tc: 4\n}\n", ""},
+	{inputCUE, functionExport, outputJSON, "test: 5", "{\n    \"test\": 5\n}\n", ""},
+}
+
+func TestHandleCUECompile(t *testing.T) {
+	for _, tv := range testTable {
+		desc := fmt.Sprintf("handleCUECompile(%q, %q, %q, %q)", tv.In, tv.Fn, tv.Out, tv.InVal)
+		out, err := cueCompile(tv.In, tv.Fn, tv.Out, tv.InVal)
+		if tv.Err != "" {
+			if err != nil {
+				if err.Error() != tv.Err {
+					t.Fatalf("%v: expected error string %q; got %q", desc, tv.Err, err)
+				}
+			} else {
+				t.Fatalf("%v: expected error, did not see one. Output was %q", desc, out)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("%v: got unexpected error: %v", desc, err)
+			} else if out != tv.OutVal {
+				t.Fatalf("%v: expected output %q: got %q", desc, tv.OutVal, out)
+			}
+		}
+	}
+}
