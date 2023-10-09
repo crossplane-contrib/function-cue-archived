@@ -6,6 +6,8 @@ Supports `cue export` based off a string template past into the Compositions `ex
 
 The resulting Export is added to the Desired State of the XR, this will override conflicting values (perhaps this should exit with an error, as this is what cue would do)
 
+This function is lifted from [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go)
+
 # Example Composition
 
 ```yaml
