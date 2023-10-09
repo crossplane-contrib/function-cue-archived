@@ -199,12 +199,12 @@ func fileExt(f string) string {
 }
 
 func parseType(s string, mode Mode) (inst, val cue.Value, err error) {
-	i := cue.Value{}
-	_, err = update(nil, i, i, "modes", mode.String())
+	_, err = update(nil, cuegenValue, cuegenValue, "modes", mode.String())
 	if err != nil {
 		return inst, val, err
 	}
 
+	i := cuegenValue
 	i = i.Unify(i.Lookup("modes", mode.String()))
 	v := i.LookupDef("File")
 
