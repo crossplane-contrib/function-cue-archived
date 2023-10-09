@@ -5,13 +5,13 @@ import (
 
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
-
 	fnv1beta1 "github.com/crossplane/function-sdk-go/proto/v1beta1"
 	"github.com/crossplane/function-sdk-go/request"
 	"github.com/crossplane/function-sdk-go/response"
-
 	"github.com/crossplane/function-template-go/input/v1beta1"
 )
+
+// https://github.com/cue-lang/cuelang.org/blob/master/play/impl.go#L57
 
 // Function returns whatever response you ask it to.
 type Function struct {
@@ -32,11 +32,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
-	// TODO: Add your Function logic here!
-	//
-	// Take a look at function-sdk-go for some utilities for working with req
-	// and rsp - https://pkg.go.dev/github.com/crossplane/function-sdk-go
-	response.Normalf(rsp, "I was run with input %q", in.Export)
+	response.Normalf(rsp, "I was run with input %q", in.Export.Value)
 
 	return rsp, nil
 }

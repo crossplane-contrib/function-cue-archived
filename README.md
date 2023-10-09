@@ -6,6 +6,8 @@ Supports `cue export` based off a string template past into the Compositions `ex
 
 The resulting Export is added to the Desired State of the XR, this will override conflicting values (perhaps this should exit with an error, as this is what cue would do)
 
+This function is lifted from [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go)
+
 # Example Composition
 
 ```yaml
@@ -46,36 +48,9 @@ spec:
 
 ## Developing a Function
 
-This template doesn't use the typical Crossplane build submodule and Makefile,
-since we'd like Functions to have a less heavyweight developer experience.
-It mostly relies on regular old Go tools:
-
-```shell
-# Run code generation - see input/generate.go
-$ go generate ./...
-
-# Run tests
-$ go test -cover ./...
-?       github.com/crossplane/function-template-go/input/v1beta1      [no test files]
-ok      github.com/crossplane/function-template-go    0.006s  coverage: 25.8% of statements
-
-# Lint the code
-$ docker run --rm -v $(pwd):/app -v ~/.cache/golangci-lint/v1.54.2:/root/.cache -w /app golangci/golangci-lint:v1.54.2 golangci-lint run
-
-# Build a Docker image - see Dockerfile
-$ docker build .
-```
-
 This Function can be pushed to any Docker registry. To push to xpkg.upbound.io
 use `docker push` and `docker-credential-up` from
 https://github.com/upbound/up/.
-
-To turn this template into a working Function, the process is:
-
-1. Add your Function logic to `RunFunction` in `fn.go`
-1. Add tests for your Function logic in `fn_test.go`
-1. Update this file, `README.md`, to be about your Function!
-1. Use `docker build`, `docker tag`, and `docker push`to push your Function
 
 Then, to try your Function out:
 
