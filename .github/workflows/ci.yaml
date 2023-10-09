@@ -1,0 +1,29 @@
+
+on:
+  pull_request:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+          with:
+            ref: ${{ github.event.pull_request.head.sha }}
+        - name: Setup Go 1.21
+          uses: actions/setup-go@v4
+          with:
+            go-version: 1.21
+        - name: Build
+          run: go build .
+    test:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            ref: ${{ github.event.pull_request.head.sha }}
+        - name: Setup Go 1.21
+          uses: actions/setup-go@v4
+          with:
+            go-version: 1.21
+        - name: Build
+          run: go test ./...

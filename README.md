@@ -1,6 +1,6 @@
 # cue-function
 
-A [Crossplane] Composition Function template, for [cuelang](https://cuelang.org/).
+A Crossplane [Composition Function](https://docs.crossplane.io/latest/concepts/composition-functions/), for [cuelang](https://cuelang.org/).
 
 Supports `cue export` based off a string template past into the Compositions `export` field.
 
