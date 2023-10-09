@@ -21,9 +21,9 @@ var testTable = []struct {
 	{inputCUE, functionExport, outputYaml, "import \"strconv\"\n\n#portI: uint16 & >1024\n\n#portS: S={\n\tstring & =~\"^[0-9]{4,5}$\"\n\t_i:     strconv.Atoi(S)\n\t#valid: uint16 & >1024 & _i\n}\n\n#port: #portI | #portS\n\npi: #port\npi: 8080\n\nps: #portS\nps: \"1313\"\n", "pi: 8080\nps: \"1313\"\n", ""},
 }
 
-func TestHandleCUECompile(t *testing.T) {
+func TestCUECompile(t *testing.T) {
 	for _, tv := range testTable {
-		desc := fmt.Sprintf("handleCUECompile(%q, %q, %q, %q)", tv.In, tv.Fn, tv.Out, tv.InVal)
+		desc := fmt.Sprintf("CUECompile(%q, %q, %q, %q)", tv.In, tv.Fn, tv.Out, tv.InVal)
 		out, err := cueCompile(tv.In, tv.Fn, tv.Out, tv.InVal)
 		if tv.Err != "" {
 			if err != nil {
