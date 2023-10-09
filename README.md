@@ -8,7 +8,18 @@ The resulting Export is added to the Desired State of the XR, this will override
 
 This function is lifted from [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go)
 
-# Example Composition
+## Installing
+
+```yaml
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-cue
+spec:
+  package: mitsuwa/function-cue:v0.1.0
+```
+
+## Example Composition
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -35,18 +46,7 @@ spec:
         spec: region: #REGION
 ```
 
-# Installing
-
-```yaml
-apiVersion: pkg.crossplane.io/v1beta1
-kind: Function
-metadata:
-  name: function-cue
-spec:
-  package: mitsuwa/function-cue:v0.1.0
-```
-
-### Desired State Returned
+## Desired State Returned
 
 function-cue will return a desired state, which is the result of the `cue export` in the `spec` field
 
@@ -60,7 +60,7 @@ spec:
     region: us-east-1
 ```
 
-### Debugging
+## Debugging
 
 This template plumbs a logger up to your Function. Any logs you emit will show
 up in the Function's pod logs. Look for the Function pod in `crossplane-system`.

@@ -4,3 +4,5 @@
    1. Add no additional opinions to configuration generation that are not given from the [core principles of cuelang](https://cuelang.org/docs/about/#philosophy-and-principles)
 
 ### TODO
+
+1. All of the `cue export` optional args to be implemented

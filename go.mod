@@ -7,8 +7,8 @@ require (
 	github.com/alecthomas/kong v0.8.0
 	github.com/crossplane/crossplane-runtime v1.13.0
 	github.com/crossplane/function-sdk-go v0.0.0-20230930011419-ec31b88ab696
-	github.com/crossplane/function-template-go v0.0.0-20230930023403-40dc198e7a6c
 	github.com/google/go-cmp v0.5.9
+	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
 	k8s.io/apimachinery v0.28.2
 	sigs.k8s.io/controller-tools v0.13.0
@@ -44,7 +44,9 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/protocolbuffers/txtpbfmt v0.0.0-20230328191034-3462fbc510c0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
