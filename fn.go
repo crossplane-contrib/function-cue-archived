@@ -23,7 +23,8 @@ type Function struct {
 
 // RunFunction runs the Function.
 func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequest) (*fnv1beta1.RunFunctionResponse, error) {
-	f.log.Info("Running Function", "tag", req.GetMeta().GetTag())
+	log := f.log.WithValues("tag", req.GetMeta().GetTag())
+	log.Info("Running Function")
 
 	rsp := response.To(req, response.DefaultTTL)
 
@@ -32,6 +33,31 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot get Function input from %T", req))
 		return rsp, nil
 	}
+	if err := in.Validate(); err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "invalid Function input"))
+		return rsp, nil
+	}
+
+	// The composite resource that actually exists.
+	oxr, err := request.GetObservedCompositeResource(req)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "cannot get observed composite resource"))
+		return rsp, nil
+	}
+	log = log.WithValues(
+		"xr-version", oxr.Resource.GetAPIVersion(),
+		"xr-kind", oxr.Resource.GetKind(),
+		"xr-name", oxr.Resource.GetName(),
+	)
+
+	// The composite resource desired by previous functions in the pipeline.
+	dxr, err := request.GetDesiredCompositeResource(req)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "cannot get desired composite resource"))
+		return rsp, nil
+	}
+	dxr.Resource.SetAPIVersion(oxr.Resource.GetAPIVersion())
+	dxr.Resource.SetKind(oxr.Resource.GetKind())
 
 	response.Normalf(rsp, "I was run with input %q", in.Export.Value)
 

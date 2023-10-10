@@ -47,8 +47,6 @@ func TestCUECompileFailures(t *testing.T) {
 		desc := fmt.Sprintf("CueCompile(%q, %q, %q, %q)", tv.In, tv.Fn, tv.Out, tv.InVal)
 		out, err := cueCompile(tv.In, tv.Fn, tv.Out, tv.InVal)
 		assert.NotNil(t, err, "%s: expected error, but did not receive one, output was %s", desc, out)
-
-		fmt.Println(err.Error())
 		assert.Equal(t, tv.Err, err.Error(), "%s: expected error %q: got %q", desc, tv.Err, err.Error())
 	}
 }
