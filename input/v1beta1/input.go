@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	"cuelang.org/go/cue/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -17,9 +18,17 @@ type Input struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Export is the input data for the cue export command
-	Export Export `json:"export"`
+	Export Export `json:"export,required"`
 }
 
+func (in Input) Validate() error {
+	if in.Export.Value == "" {
+		return errors.New("value cannot be empty")
+	}
+	return nil
+}
+
+// Export contains the export data
 type Export struct {
 	// Value is the string representation of the cue value to run `cue export` against
 	Value string `json:"value,required"`

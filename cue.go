@@ -35,7 +35,7 @@ type cueOutputFmt string
 const (
 	outputCUE  cueOutputFmt = cueOutputFmt(inputCUE)
 	outputJSON cueOutputFmt = cueOutputFmt(inputJSON)
-	outputYaml cueOutputFmt = cueOutputFmt(inputYaml)
+	outputYAML cueOutputFmt = cueOutputFmt(inputYaml)
 )
 
 func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal string) (string, error) {
@@ -93,14 +93,14 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 			syn = append(syn, cue.Concrete(true))
 		}
 		opts = append(opts, format.TabIndent(true))
-	case outputJSON, outputYaml:
+	case outputJSON, outputYAML:
 		opts = append(opts,
 			format.TabIndent(false),
 			format.UseSpaces(2),
 		)
 	}
 	encConf.Format = opts
-	synF := getSyntax(v, syn)
+	synF, err := getSyntax(v, syn)
 	if err := e.EncodeFile(synF); err != nil {
 		return "", fmt.Errorf("failed to encode: %w", err)
 	}
@@ -108,18 +108,18 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 }
 
 // getSyntax is copied from cmd/cue/cmd/eval.go
-func getSyntax(v cue.Value, opts []cue.Option) *ast.File {
+func getSyntax(v cue.Value, opts []cue.Option) (*ast.File, error) {
 	n := v.Syntax(opts...)
 	switch x := n.(type) {
 	case *ast.File:
-		return x
+		return x, nil
 	case *ast.StructLit:
-		return &ast.File{Decls: x.Elts}
+		return &ast.File{Decls: x.Elts}, nil
 	case ast.Expr:
 		ast.SetRelPos(x, token.NoSpace)
-		return &ast.File{Decls: []ast.Decl{&ast.EmbedDecl{Expr: x}}}
+		return &ast.File{Decls: []ast.Decl{&ast.EmbedDecl{Expr: x}}}, nil
 	default:
-		panic("unreachable")
+		return &ast.File{}, errors.New("unreachable")
 	}
 }
 

@@ -38,27 +38,21 @@ spec:
     input:
       apiVersion: template.fn.crossplane.io/v1beta1
       kind: Input
+      metadata:
+        name: basic
       export: |
-        #ENVIRONMENT: "dev"
+        #NAME: "basic"
         #REGION: "us-east-1"
 
-        metadata: env: #ENVIRONMENT
+        apiVersion: "example.org/v1"
+        kind: "vpc"
+        metadata: name: #NAME
         spec: region: #REGION
 ```
 
-## Desired State Returned
+## Desired State output
 
-function-cue will return a desired state, which is the result of the `cue export` in the `spec` field
-
-```yaml
-apiVersion: cue.crossplane.io/v1
-kind: Export
-spec:
-  metadata:
-    env: dev
-  spec:
-    region: us-east-1
-```
+function-cue will return a desired resources created by the input.Export.Value field.  The input must specify at least a `kind`, `apiVersion`, `metadata.Name` fields.
 
 ## Debugging
 

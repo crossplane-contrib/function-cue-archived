@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"cuelang.org/go/cue/errors"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/build"
+	"cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/token"
 	"cuelang.org/go/encoding/openapi"
@@ -57,7 +57,10 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 		}
 	case build.ProtobufJSON:
 		e.interpret = func(v cue.Value) (*ast.File, error) {
-			f := valueToFile(v)
+			f, err := valueToFile(v)
+			if err != nil {
+				return f, err
+			}
 			return f, jsonpb.NewEncoder(v).RewriteFile(f)
 		}
 
@@ -115,7 +118,12 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 
 			// Casting an ast.Expr to an ast.File ensures that it always ends
 			// with a newline.
-			b, err := format.Node(ToFile(n), opts...)
+			f, err := ToFile(n)
+			if err != nil {
+				return err
+			}
+
+			b, err := format.Node(f, opts...)
 			if err != nil {
 				return err
 			}
@@ -296,29 +304,33 @@ func (e *Encoder) Encode(v cue.Value) error {
 	if e.encValue != nil {
 		return e.encValue(v)
 	}
-	return e.encFile(valueToFile(v))
+	f, err := valueToFile(v)
+	if err != nil {
+		return err
+	}
+	return e.encFile(f)
 }
 
-func valueToFile(v cue.Value) *ast.File {
+func valueToFile(v cue.Value) (*ast.File, error) {
 	return ToFile(v.Syntax())
 }
 
 // ToFile converts an expression to a file.
 //
 // Adjusts the spacing of x when needed.
-func ToFile(n ast.Node) *ast.File {
+func ToFile(n ast.Node) (*ast.File, error) {
 	switch x := n.(type) {
 	case nil:
-		return nil
+		return nil, nil
 	case *ast.StructLit:
-		return &ast.File{Decls: x.Elts}
+		return &ast.File{Decls: x.Elts}, nil
 	case ast.Expr:
 		ast.SetRelPos(x, token.NoSpace)
-		return &ast.File{Decls: []ast.Decl{&ast.EmbedDecl{Expr: x}}}
+		return &ast.File{Decls: []ast.Decl{&ast.EmbedDecl{Expr: x}}}, nil
 	case *ast.File:
-		return x
+		return x, nil
 	default:
-		panic(fmt.Sprintf("Unsupported node type %T", x))
+		return &ast.File{}, fmt.Errorf("Unsupported node type %T", x)
 	}
 }
 
