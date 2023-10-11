@@ -41,29 +41,27 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
-							Message:  "invalid Function input: value cannot be empty",
+							Message:  "invalid function input: value cannot be empty",
 						},
 					},
 				},
 			},
 		},
-		"HelloWorldResponse": {
-			reason: "The Function should return a fatal result if no input was specified",
+		"BasicResourceCreation": {
+			reason: "The Function should be able to create a resource from a cue template",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
 						"apiVersion": "dummy.fn.crossplane.io",
-						"kind": "Input",
+						"kind": "dummy",
+						"metadata": {
+							"name": "basic"
+						},
 						"Export": {
-							"Value": "Hello, world!"
+							"Value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata:\n  name: \"basic\""
 						}
 					}`),
 					Observed: &fnv1beta1.State{
-						Composite: &fnv1beta1.Resource{
-							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
-						},
-					},
-					Desired: &fnv1beta1.State{
 						Composite: &fnv1beta1.Resource{
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
@@ -76,12 +74,17 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "I was run with input \"Hello, world!\"",
+							Message:  "created resource \"basic\" of kind \"Generated\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
 						Composite: &fnv1beta1.Resource{
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"basic": {
+								Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"Generated","metadata":{"name":"basic"}}`),
+							},
 						},
 					},
 				},

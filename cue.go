@@ -35,7 +35,7 @@ type cueOutputFmt string
 const (
 	outputCUE  cueOutputFmt = cueOutputFmt(inputCUE)
 	outputJSON cueOutputFmt = cueOutputFmt(inputJSON)
-	outputYaml cueOutputFmt = cueOutputFmt(inputYaml)
+	outputYAML cueOutputFmt = cueOutputFmt(inputYaml)
 )
 
 func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal string) (string, error) {
@@ -93,7 +93,7 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 			syn = append(syn, cue.Concrete(true))
 		}
 		opts = append(opts, format.TabIndent(true))
-	case outputJSON, outputYaml:
+	case outputJSON, outputYAML:
 		opts = append(opts,
 			format.TabIndent(false),
 			format.UseSpaces(2),
