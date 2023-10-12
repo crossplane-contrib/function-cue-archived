@@ -8,10 +8,9 @@ require (
 	github.com/crossplane/crossplane-runtime v1.13.0
 	github.com/crossplane/function-sdk-go v0.0.0-20230930011419-ec31b88ab696
 	github.com/google/go-cmp v0.5.9
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
-	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	google.golang.org/protobuf v1.31.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.28.2
 	sigs.k8s.io/controller-tools v0.13.0
 )
@@ -47,7 +46,6 @@ require (
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/protocolbuffers/txtpbfmt v0.0.0-20230328191034-3462fbc510c0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
@@ -68,6 +66,7 @@ require (
 	google.golang.org/grpc v1.58.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.28.2 // indirect
 	k8s.io/apiextensions-apiserver v0.28.0 // indirect
 	k8s.io/client-go v0.28.2 // indirect

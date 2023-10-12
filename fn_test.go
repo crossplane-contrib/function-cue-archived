@@ -58,7 +58,7 @@ func TestRunFunction(t *testing.T) {
 							"name": "basic"
 						},
 						"Export": {
-							"Value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata:\n  name: \"basic\""
+							"Value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata: name: \"basic\""
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -90,6 +90,139 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+		"Conditionals": {
+			reason: "Cue Conditionals should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "conditional"
+						},
+						"Export": {
+							"Value": "let #ENV = {\n\tPROVIDER: \"aws\"\n}\n\nif #ENV[\"PROVIDER\"] == \"aws\" {\n\tapiVersion: \"eks.nobu.dev/v1beta\"\n}\nif #ENV[\"PROVIDER\"] == \"gcp\" {\n\tapiVersion: \"gke.nobu.dev/v1beta1\"\n}\n\nkind: \"XNodepool\"\nmetadata: name: \"TestNodepool\"\nspec: parameters: {\n\tautoscaling: [{\n\t\tmaxNodeCount: 1\n\t\tminNodeCount: 1\n\t}]\n\tclusterName: \"example1\"\n\tif #ENV[\"LABELS\"] != _|_ {\n\t\tnodeLabels: #ENV[\"LABELS\"]\n\t}\n\tregion: \"us-east-2\"\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"TestNodepool\" of kind \"XNodepool\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"conditional": {
+								Resource: resource.MustStructJSON(`{
+								    "kind": "XNodepool",
+								    "metadata": {
+								        "name": "TestNodepool"
+								    },
+								    "apiVersion": "eks.nobu.dev/v1beta",
+								    "spec": {
+								        "parameters": {
+								            "autoscaling": [
+								                {
+								                    "maxNodeCount": 1,
+								                    "minNodeCount": 1
+								                }
+								            ],
+								            "clusterName": "example1",
+								            "region": "us-east-2"
+								        }
+								    }
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		// "Identification": {
+		// 	reason: "CUE Identifiers should work",
+		// 	args: args{
+		// 		req: &fnv1beta1.RunFunctionRequest{
+		// 			Input: resource.MustStructJSON(`{
+		// 				"apiVersion": "dummy.fn.crossplane.io",
+		// 				"kind": "dummy",
+		// 				"metadata": {
+		// 					"name": "identification"
+		// 				},
+		// 				"Export": {
+		// 					"Value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n#deployment.echoserver\n"
+		// 				}
+		// 			}`),
+		// 			Observed: &fnv1beta1.State{
+		// 				Composite: &fnv1beta1.Resource{
+		// 					Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// 	want: want{
+		// 		rsp: &fnv1beta1.RunFunctionResponse{
+		// 			Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+		// 			Results: []*fnv1beta1.Result{
+		// 				{
+		// 					Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+		// 					Message:  "created resource \"echoservr\" of kind \"Deployment\"",
+		// 				},
+		// 			},
+		// 			Desired: &fnv1beta1.State{
+		// 				Composite: &fnv1beta1.Resource{
+		// 					Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+		// 				},
+		// 				Resources: map[string]*fnv1beta1.Resource{
+		// 					"identification": {
+		// 						Resource: resource.MustStructJSON(`{
+		// 							"apiVersion": "apps/v1",
+		// 							"kind": "Deployment",
+		// 							"metadata": {
+		// 							    "name": "echoserver"
+		// 							},
+		// 							"spec": {
+		// 							    "replicas": 1,
+		// 							    "template": {
+		// 							        "metadata": {
+		// 							            "annotations": {
+		// 							                "prometheus.io.scrape": "true",
+		// 							                "prometheus.io.port": "7080"
+		// 							            },
+		// 							            "labels": {
+		// 							                "app": "echoserver",
+		// 							                "domain": "prod",
+		// 							                "component": "core"
+		// 							            }
+		// 							        },
+		// 							        "spec": {
+		// 							            "containers": [
+		// 							                {
+		// 							                    "name": "echoserver"
+		// 							                }
+		// 							            ]
+		// 							        }
+		// 							    }
+		// 							}
+		// 						}`),
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// },
 	}
 
 	for name, tc := range cases {

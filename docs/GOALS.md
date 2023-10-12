@@ -6,3 +6,6 @@
 ### TODO
 
 1. All of the `cue export` optional args to be implemented
+   1. The most important being injecting variables, and expression
+1. Add support for loading cue files from configmap
+1. Support `cue def` ?
