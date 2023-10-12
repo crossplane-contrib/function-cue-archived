@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/Mitsuwa/function-cue/input/v1beta1"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/crossplane/function-sdk-go/resource"
 	"github.com/crossplane/function-sdk-go/resource/composed"
 	"github.com/crossplane/function-sdk-go/response"
-	"github.com/yalp/jsonpath"
 )
 
 // Function returns whatever response you ask it to.
@@ -79,46 +77,23 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 
 	out, err := cueCompile(inputCUE, functionExport, outputJSON, in.Export.Value)
 	if err != nil {
-		return rsp, err
+		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
+		return rsp, nil
 	}
 
 	var data interface{}
 	if err := json.Unmarshal([]byte(out), &data); err != nil {
-		return rsp, err
+		response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling JSON:\n%s", out))
+		return rsp, nil
 	}
-	fmt.Println(data)
-
-	paths := make(map[string]struct{})
-	gatherPaths(data, "", paths)
 
 	name := resource.Name(in.Name)
 	desired[name] = &resource.DesiredComposed{Resource: composed.New()}
-	for path := range paths {
-		// ignore empty case when there was no successful traversal
-		if path == "" {
-			continue
-		}
-
-		val, err := jsonpath.Read(data, fmt.Sprintf("$%s", path))
-		if err != nil {
-			response.Fatal(rsp, errors.Wrap(err, "failed parsing JSONPath expression"))
-			return rsp, nil
-		}
-
-		fmt.Println(path, ":", val)
-		if path == ".apiVersion" {
-			desired[name].Resource.SetAPIVersion(val.(string))
-		} else if path == ".kind" {
-			desired[name].Resource.SetKind(val.(string))
-		} else {
-			path = strings.TrimPrefix(path, ".")
-			if err := desired[name].Resource.SetValue(path, val); err != nil {
-				response.Fatal(rsp, errors.Wrap(err, "setting value in dxr failed"))
-				return rsp, nil
-			}
-		}
+	if err := setData(data, "", desired[name]); err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "failed setting data"))
 	}
 
+	// Is this necessary?
 	if err := validateObjects(desired); err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "object validation failed, must have apiVersion, kind, and name"))
 		return rsp, nil

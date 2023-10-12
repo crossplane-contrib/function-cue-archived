@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/format"
@@ -38,6 +37,7 @@ const (
 	outputYAML cueOutputFmt = cueOutputFmt(inputYaml)
 )
 
+// cueCompile compiles a CUE template passed as a inputVal.  Define the cueOutputFmt, cueFunction, and cueInputFmt
 func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal string) (string, error) {
 	loadCfg := &load.Config{
 		Stdin:      strings.NewReader(inputVal),
@@ -74,6 +74,8 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 	var outBuf bytes.Buffer
 	encConf := &Config{
 		Out: &outBuf,
+		// Mode:   Export,
+		// Schema: v,
 	}
 	e, err := NewEncoder(f, encConf)
 	if err != nil {
@@ -100,27 +102,11 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 		)
 	}
 	encConf.Format = opts
-	synF, err := getSyntax(v, syn)
+	synF, err := ToFile(v.Syntax(syn...))
 	if err := e.EncodeFile(synF); err != nil {
 		return "", fmt.Errorf("failed to encode: %w", err)
 	}
 	return outBuf.String(), nil
-}
-
-// getSyntax is copied from cmd/cue/cmd/eval.go
-func getSyntax(v cue.Value, opts []cue.Option) (*ast.File, error) {
-	n := v.Syntax(opts...)
-	switch x := n.(type) {
-	case *ast.File:
-		return x, nil
-	case *ast.StructLit:
-		return &ast.File{Decls: x.Elts}, nil
-	case ast.Expr:
-		ast.SetRelPos(x, token.NoSpace)
-		return &ast.File{Decls: []ast.Decl{&ast.EmbedDecl{Expr: x}}}, nil
-	default:
-		return &ast.File{}, errors.New("unreachable")
-	}
 }
 
 // ParseFile parses a single-argument file specifier, such as when a file is
