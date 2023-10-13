@@ -31,7 +31,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 
 	rsp := response.To(req, response.DefaultTTL)
 
-	in := &v1beta1.Input{}
+	in := &v1beta1.CUEInput{}
 	if err := request.GetInput(req, in); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot get function input from %T", req))
 		return rsp, nil
