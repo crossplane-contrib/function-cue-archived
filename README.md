@@ -8,6 +8,10 @@ The resulting Export is added to the Desired State of the XR, this will override
 
 This function is lifted from [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go)
 
+## CUE Version supported
+
+`v0.6.0`
+
 ## Installing
 
 ```yaml
