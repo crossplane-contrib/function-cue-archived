@@ -264,11 +264,6 @@ type Config struct {
 	ParseFile     func(name string, src interface{}) (*ast.File, error)
 }
 
-func (e *Encoder) EncodeFile(f *ast.File) error {
-	e.autoSimplify = false
-	return e.encodeFile(f, e.interpret)
-}
-
 func (e *Encoder) encodeFile(f *ast.File, interpret func(cue.Value) (*ast.File, error)) error {
 	if interpret == nil && e.encFile != nil {
 		return e.encFile(f)

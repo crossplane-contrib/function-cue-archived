@@ -14,6 +14,7 @@ import (
 	"github.com/crossplane/function-sdk-go/resource"
 	"github.com/crossplane/function-sdk-go/resource/composed"
 	"github.com/crossplane/function-sdk-go/response"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Function returns whatever response you ask it to.
@@ -81,17 +82,15 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
-	var data interface{}
+	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(out), &data); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling JSON:\n%s", out))
 		return rsp, nil
 	}
 
 	name := resource.Name(in.Name)
-	desired[name] = &resource.DesiredComposed{Resource: composed.New()}
-	if err := setData(data, "", desired[name]); err != nil {
-		response.Fatal(rsp, errors.Wrap(err, "failed setting data"))
-	}
+	tmp := &composed.Unstructured{Unstructured: unstructured.Unstructured{Object: data}}
+	desired[name] = &resource.DesiredComposed{Resource: tmp}
 
 	// Is this necessary?
 	if err := validateObjects(desired); err != nil {

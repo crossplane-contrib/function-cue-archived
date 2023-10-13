@@ -58,12 +58,16 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 		return "", fmt.Errorf("failed to build: %w", err)
 	}
 	concrete := true
-	if out == outputCUE {
+	switch out {
+	case outputCUE:
 		concrete = false
+	case outputJSON, outputYAML:
+	default:
+		return "", fmt.Errorf("unsupported output format %q", out)
 	}
 	v := insts[0].Value()
 	if err := v.Validate(cue.Concrete(concrete)); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to validate: %w", err)
 	}
 
 	f, err := parseFile(string(out)+":-", Export)
@@ -73,13 +77,14 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 	}
 	var outBuf bytes.Buffer
 	encConf := &Config{
-		Out: &outBuf,
-		// Mode:   Export,
-		// Schema: v,
+		Out:    &outBuf,
+		Stdin:  loadCfg.Stdin,
+		Mode:   Export,
+		Schema: v,
 	}
 	e, err := NewEncoder(f, encConf)
 	if err != nil {
-		return "", fmt.Errorf("failed to build encoder: %v", err)
+		return "", fmt.Errorf("failed to build encoder: %w", err)
 	}
 
 	syn := []cue.Option{
@@ -102,8 +107,7 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 		)
 	}
 	encConf.Format = opts
-	synF, err := ToFile(v.Syntax(syn...))
-	if err := e.EncodeFile(synF); err != nil {
+	if err := e.Encode(v); err != nil {
 		return "", fmt.Errorf("failed to encode: %w", err)
 	}
 	return outBuf.String(), nil
@@ -185,11 +189,6 @@ func fileExt(f string) string {
 }
 
 func parseType(s string, mode Mode) (inst, val cue.Value, err error) {
-	_, err = update(nil, cuegenValue, cuegenValue, "modes", mode.String())
-	if err != nil {
-		return inst, val, err
-	}
-
 	i := cuegenValue
 	i = i.Unify(i.Lookup("modes", mode.String()))
 	v := i.LookupDef("File")
