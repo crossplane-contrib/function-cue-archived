@@ -1,8 +1,10 @@
 # Targeting Objects
 
-`cue export` can target two types of objects:
+`cue export` can target various types of objects:
 
 - `Resources` default: create new resources
+- `ExistingResources` output to existing Resources, selected by `desired[resource.Name]`
+  - The `metadata.name` and `kind` must match
 - `XR` apply the output to the `XR`
 
 This is controlled by fields on the `Input`
@@ -27,7 +29,7 @@ spec:
       metadata:
         name: basic
       export:
-        target: XR | Resources
+        target: XR | Resources | ExistingResources
         value: |
           ...
 ```
