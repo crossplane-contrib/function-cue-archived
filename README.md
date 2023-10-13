@@ -44,14 +44,15 @@ spec:
       kind: Input
       metadata:
         name: basic
-      export: |
-        #NAME: "basic"
-        #REGION: "us-east-1"
+      export:
+        value: |
+          #NAME: "basic"
+          #REGION: "us-east-1"
 
-        apiVersion: "example.org/v1"
-        kind: "vpc"
-        metadata: name: #NAME
-        spec: region: #REGION
+          apiVersion: "example.org/v1"
+          kind: "xvpc"
+          metadata: name: #NAME
+          spec: region: #REGION
 ```
 
 ## Desired State output
