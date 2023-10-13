@@ -41,7 +41,7 @@ spec:
       name: function-cue
     input:
       apiVersion: template.fn.crossplane.io/v1beta1
-      kind: Input
+      kind: CUEInput
       metadata:
         name: basic
       export:

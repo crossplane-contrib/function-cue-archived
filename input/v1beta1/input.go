@@ -9,11 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Input can be used to provide input to this Function.
+// CUEInput can be used to provide input to this Function.
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 // +kubebuilder:resource:categories=crossplane
-type Input struct {
+type CUEInput struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -21,7 +21,7 @@ type Input struct {
 	Export Export `json:"export,required"`
 }
 
-func (in Input) Validate() error {
+func (in CUEInput) Validate() error {
 	if in.Export.Value == "" {
 		return errors.New("value cannot be empty")
 	}
