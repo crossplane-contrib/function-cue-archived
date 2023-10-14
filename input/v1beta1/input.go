@@ -30,17 +30,18 @@ func (in CUEInput) Validate() error {
 
 // Export contains the export data
 type Export struct {
-	// Value is the string representation of the cue value to run `cue export` against
-	Value string `json:"value,required"`
 	// Options for `cue export`
 	Options ExportOptions `json:"options,omitempty"`
+	// Value is the string representation of the cue value to run `cue export` against
+	Value string `json:"value,required"`
 }
 
 type ExportOptions struct {
 	// Escape use HTML escaping
 	Escape bool `json:"escape,omitempty"`
 	// Expression export only this expression
-	Expression []string `json:"expression,omitempty"`
+	// +kubebuilder:default:=[]
+	Expressions []string `json:"expressions"`
 	// Force overwriting existing files
 	Force bool `json:"force,omitempty"`
 	// Inject set the value of a tagged field

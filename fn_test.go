@@ -57,8 +57,8 @@ func TestRunFunction(t *testing.T) {
 						"metadata": {
 							"name": "basic"
 						},
-						"Export": {
-							"Value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata: name: \"basic\""
+						"export": {
+							"value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata: name: \"basic\""
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -100,8 +100,8 @@ func TestRunFunction(t *testing.T) {
 						"metadata": {
 							"name": "conditional"
 						},
-						"Export": {
-							"Value": "let #ENV = {\n\tPROVIDER: \"aws\"\n}\n\nif #ENV[\"PROVIDER\"] == \"aws\" {\n\tapiVersion: \"eks.nobu.dev/v1beta\"\n}\nif #ENV[\"PROVIDER\"] == \"gcp\" {\n\tapiVersion: \"gke.nobu.dev/v1beta1\"\n}\n\nkind: \"XNodepool\"\nmetadata: name: \"TestNodepool\"\nspec: parameters: {\n\tautoscaling: [{\n\t\tmaxNodeCount: 1\n\t\tminNodeCount: 1\n\t}]\n\tclusterName: \"example1\"\n\tif #ENV[\"LABELS\"] != _|_ {\n\t\tnodeLabels: #ENV[\"LABELS\"]\n\t}\n\tregion: \"us-east-2\"\n}\n"
+						"export": {
+							"value": "let #ENV = {\n\tPROVIDER: \"aws\"\n}\n\nif #ENV[\"PROVIDER\"] == \"aws\" {\n\tapiVersion: \"eks.nobu.dev/v1beta\"\n}\nif #ENV[\"PROVIDER\"] == \"gcp\" {\n\tapiVersion: \"gke.nobu.dev/v1beta1\"\n}\n\nkind: \"XNodepool\"\nmetadata: name: \"TestNodepool\"\nspec: parameters: {\n\tautoscaling: [{\n\t\tmaxNodeCount: 1\n\t\tminNodeCount: 1\n\t}]\n\tclusterName: \"example1\"\n\tif #ENV[\"LABELS\"] != _|_ {\n\t\tnodeLabels: #ENV[\"LABELS\"]\n\t}\n\tregion: \"us-east-2\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -127,11 +127,11 @@ func TestRunFunction(t *testing.T) {
 						Resources: map[string]*fnv1beta1.Resource{
 							"conditional": {
 								Resource: resource.MustStructJSON(`{
+								    "apiVersion": "eks.nobu.dev/v1beta",
 								    "kind": "XNodepool",
 								    "metadata": {
 								        "name": "TestNodepool"
 								    },
-								    "apiVersion": "eks.nobu.dev/v1beta",
 								    "spec": {
 								        "parameters": {
 								            "autoscaling": [
@@ -161,8 +161,8 @@ func TestRunFunction(t *testing.T) {
 						"metadata": {
 							"name": "identification"
 						},
-						"Export": {
-							"Value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n#deployment.echoserver\n"
+						"export": {
+							"value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n#deployment.echoserver\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -215,6 +215,74 @@ func TestRunFunction(t *testing.T) {
 									            ]
 									        }
 									    }
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		// Expressions allow for multiple document generations
+		"Expressions": {
+			reason: "CUE Expressions should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"yaml.MarshalStream(output)"
+								]
+							},
+							"value": "output: [\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t},\n]\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example-cluster\" of kind \"Cluster\"",
+						},
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example-nodepool\" of kind \"Nodepool\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"expression-example-cluster": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Cluster",
+									"metadata": {
+									    "name": "example-cluster"
+									}
+								}`),
+							},
+							"expression-example-nodepool": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Nodepool",
+									"metadata": {
+									    "name": "example-nodepool"
 									}
 								}`),
 							},

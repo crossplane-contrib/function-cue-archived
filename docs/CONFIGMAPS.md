@@ -3,7 +3,7 @@
 TODO
 
 Configmaps can be used to store additional `CUE` files.
-These files can be referenced in the `Input` template using the `configMaps`
+These files can be referenced in the `CUEInput` template using the `configMaps`
 field and be added to the build
 
 ```yaml
@@ -22,7 +22,7 @@ spec:
         name: function-cue
       input:
         apiVersion: template.fn.crossplane.io/v1beta1
-        kind: Input
+        kind: CUEInput
         metadata:
           name: basic
         configMaps:

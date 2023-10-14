@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-
 	"github.com/Mitsuwa/function-cue/input/v1beta1"
-
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	fnv1beta1 "github.com/crossplane/function-sdk-go/proto/v1beta1"
@@ -14,6 +14,7 @@ import (
 	"github.com/crossplane/function-sdk-go/resource"
 	"github.com/crossplane/function-sdk-go/resource/composed"
 	"github.com/crossplane/function-sdk-go/response"
+	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -76,26 +77,77 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
-	out, err := cueCompile(inputCUE, functionExport, outputJSON, in.Export.Value)
+	outputFmt := outputJSON
+	if len(in.Export.Options.Expressions) > 0 {
+		outputFmt = outputTXT
+	}
+	out, err := cueCompile(inputCUE, functionExport, outputFmt, *in)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
 	}
 
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(out), &data); err != nil {
-		response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling JSON:\n%s", out))
-		return rsp, nil
-	}
+	var (
+		data map[string]interface{}
+	)
+	// If there are no expressions, we expect a JSON object
+	if len(in.Export.Options.Expressions) == 0 {
+		if err := json.Unmarshal([]byte(out), &data); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling JSON:\n%s", out))
+			return rsp, nil
+		}
 
-	name := resource.Name(in.Name)
-	tmp := &composed.Unstructured{Unstructured: unstructured.Unstructured{Object: data}}
-	desired[name] = &resource.DesiredComposed{Resource: tmp}
+		fmt.Printf("Setting: %+v\n", data)
+		name := resource.Name(in.Name)
+		desired[name] = &resource.DesiredComposed{
+			Resource: &composed.Unstructured{
+				Unstructured: unstructured.Unstructured{
+					Object: data,
+				},
+			},
+		}
+	} else {
+		// CUE Does not support outputting multiple JSON Documents with expressions
+		// If there are expressions, the output will be 'text' and it will be expected to be YAML
+		scanner := bufio.NewScanner(bytes.NewReader([]byte(out)))
+		var document string
+		for scanner.Scan() {
+			line := scanner.Text()
+			// Check if there are multiple documents
+			if line == fmt.Sprintf("---") {
+				// End of document
+				if err := yaml.Unmarshal([]byte(document), &data); err != nil {
+					response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling YAML to JSON:\n%s", document))
+					return rsp, nil
+				}
 
-	// Is this necessary?
-	if err := validateObjects(desired); err != nil {
-		response.Fatal(rsp, errors.Wrap(err, "object validation failed, must have apiVersion, kind, and name"))
-		return rsp, nil
+				tmp := unstructured.Unstructured{Object: data}
+				name := resource.Name(in.Name + "-" + tmp.GetName())
+				desired[name] = &resource.DesiredComposed{
+					Resource: &composed.Unstructured{
+						Unstructured: tmp,
+					},
+				}
+				// Reset document and data
+				document = ""
+				data = map[string]interface{}{}
+			} else {
+				document += fmt.Sprintln(line)
+			}
+		}
+		// End of document
+		if err := yaml.Unmarshal([]byte(document), &data); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "failed unmarshalling YAML to JSON:\n%s", document))
+			return rsp, nil
+		}
+
+		tmp := unstructured.Unstructured{Object: data}
+		name := resource.Name(in.Name + "-" + tmp.GetName())
+		desired[name] = &resource.DesiredComposed{
+			Resource: &composed.Unstructured{
+				Unstructured: tmp,
+			},
+		}
 	}
 
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
@@ -119,19 +171,4 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		"input", in.Name)
 
 	return rsp, nil
-}
-
-func validateObjects(objs map[resource.Name]*resource.DesiredComposed) error {
-	for _, obj := range objs {
-		if obj.Resource.GetKind() == "" {
-			return errors.New("kind must be set")
-		}
-		if obj.Resource.GetAPIVersion() == "" {
-			return errors.New("apiVersion must be set")
-		}
-		if obj.Resource.GetName() == "" {
-			return errors.New("name must be set")
-		}
-	}
-	return nil
 }
