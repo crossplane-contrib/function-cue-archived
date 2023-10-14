@@ -35,7 +35,8 @@ spec:
                   escape:
                     description: Escape use HTML escaping
                     type: boolean
-                  expression:
+                  expressions:
+                    default: '[]'
                     description: Expression export only this expression
                     items:
                       type: string
@@ -92,6 +93,8 @@ spec:
                   with_context:
                     description: WithContext import as object with contextual data
                     type: boolean
+                required:
+                - expressions
                 type: object
               value:
                 description: Value is the string representation of the cue value to

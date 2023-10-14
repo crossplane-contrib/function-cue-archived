@@ -1,15 +1,8 @@
-# Targeting Objects
+# Supported Export Options
 
-TODO
+`expression`
 
-`cue export` can target various types of objects:
-
-- `Resources` default: create new resources
-- `ExistingResources` output to existing Resources, selected by `desired[resource.Name]`
-  - The `metadata.name` and `kind` must match
-- `XR` apply the output to the `XR`
-
-This is controlled by fields on the `Input`
+Configured under the `CUEInput.export.expression` field
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -19,7 +12,7 @@ metadata:
 spec:
   compositeTypeRef:
     apiVersion: database.example.com/v1alpha1
-    kind: RDS
+    kind: NoSQL
   mode: Pipeline
   pipeline:
   - step: run-cue-function
@@ -31,7 +24,9 @@ spec:
       metadata:
         name: basic
       export:
-        target: XR | Resources | ExistingResources
+        expression: yaml.MarshalStream(output)
         value: |
-          ...
+          output: [
+            ...
+          ]
 ```

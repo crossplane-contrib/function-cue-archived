@@ -6,11 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Mitsuwa/function-cue/input/v1beta1"
+
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/load"
+	"cuelang.org/go/cue/parser"
 	"cuelang.org/go/cue/token"
 )
 
@@ -26,7 +30,8 @@ type cueInputFmt string
 const (
 	inputCUE  cueInputFmt = "cue"
 	inputJSON cueInputFmt = "json"
-	inputYaml cueInputFmt = "yaml"
+	inputYAML cueInputFmt = "yaml"
+	inputTXT  cueInputFmt = "text"
 )
 
 type cueOutputFmt string
@@ -34,17 +39,29 @@ type cueOutputFmt string
 const (
 	outputCUE  cueOutputFmt = cueOutputFmt(inputCUE)
 	outputJSON cueOutputFmt = cueOutputFmt(inputJSON)
-	outputYAML cueOutputFmt = cueOutputFmt(inputYaml)
+	outputYAML cueOutputFmt = cueOutputFmt(inputYAML)
+	outputTXT  cueOutputFmt = cueOutputFmt(inputTXT)
 )
 
 // cueCompile compiles a CUE template passed as a inputVal.  Define the cueOutputFmt, cueFunction, and cueInputFmt
-func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal string) (string, error) {
+func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.CUEInput) (string, error) {
+	exprs := []ast.Expr{}
+	for _, expr := range input.Export.Options.Expressions {
+		if expr != "" {
+			expr, err := parser.ParseExpr("--expression", expr)
+			if err != nil {
+				return "", fmt.Errorf("failed to parse expression: %w", err)
+			}
+			exprs = append(exprs, expr)
+		}
+	}
+
 	loadCfg := &load.Config{
-		Stdin:      strings.NewReader(inputVal),
+		Stdin:      strings.NewReader(input.Export.Value),
 		Dir:        "/",
 		ModuleRoot: "/",
 		Overlay: map[string]load.Source{
-			"/cue.mod/module.cue": load.FromString(`module: "example.com"`),
+			"/cue.mod/module.cue": load.FromString(`module: "nobu.dev"`),
 		},
 	}
 	builds := load.Instances([]string{string(in) + ":", "-"}, loadCfg)
@@ -61,11 +78,11 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, inputVal strin
 	switch out {
 	case outputCUE:
 		concrete = false
-	case outputJSON, outputYAML:
+	case outputJSON, outputYAML, outputTXT:
 	default:
 		return "", fmt.Errorf("unsupported output format %q", out)
 	}
-	v := insts[0].Value()
+	v := exprVal(inst.Value(), exprs)
 	if err := v.Validate(cue.Concrete(concrete)); err != nil {
 		return "", fmt.Errorf("failed to validate: %w", err)
 	}
