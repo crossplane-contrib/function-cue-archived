@@ -272,6 +272,7 @@ type Config struct {
 	ProtoPath     []string
 	Format        []format.Option
 	ParseFile     func(name string, src interface{}) (*ast.File, error)
+	Expressions   []ast.Expr
 }
 
 func (e *Encoder) encodeFile(f *ast.File, interpret func(cue.Value) (*ast.File, error)) error {
@@ -309,6 +310,7 @@ func (e *Encoder) Encode(v cue.Value) error {
 	if e.encValue != nil {
 		return e.encValue(v)
 	}
+
 	f, err := valueToFile(v)
 	if err != nil {
 		return err
