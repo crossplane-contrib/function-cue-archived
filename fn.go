@@ -83,31 +83,25 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 
 	var (
-		outputFmt  = outputJSON
-		streamType cueOutputFmt
+		outputFmt = outputJSON
 	)
-	for _, expr := range in.Export.Options.Expressions {
-		// Streams for json or yaml need to be parsed as text
-		if strings.Contains(expr, "MarshalStream") {
-			outputFmt = outputTXT
-
-			if strings.HasPrefix(expr, string(outputJSON)) {
-				streamType = outputJSON
-			} else if strings.HasPrefix(expr, string(outputYAML)) {
-				streamType = outputYAML
-			} else {
-				response.Fatal(rsp, fmt.Errorf("unknown stream type %s", expr))
-				return rsp, nil
-			}
-		}
+	// Multiple expressions are always a stream
+	if len(in.Export.Options.Expressions) > 1 {
+		outputFmt = outputTXT
 	}
+	// If there is only 1 epxression, check if the expression itself is a stream
+	// If so, it should also be TXT output
+	if len(in.Export.Options.Expressions) == 1 && strings.Contains(in.Export.Options.Expressions[0], "MarshalStream") {
+		outputFmt = outputTXT
+	}
+
 	cmpOut, err := cueCompile(inputCUE, functionExport, outputFmt, *in)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
 	}
 
-	if err := addResourcesTo(desired, in, cmpOut, outputFmt, streamType); err != nil {
+	if err := addResourcesTo(desired, in, cmpOut, outputFmt); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to desired"))
 		return rsp, nil
 	}
@@ -142,7 +136,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	return rsp, nil
 }
 
-func addResourcesTo(desired map[resource.Name]*resource.DesiredComposed, in *v1beta1.CUEInput, output string, outFmt cueOutputFmt, streamType cueOutputFmt) error {
+func addResourcesTo(desired map[resource.Name]*resource.DesiredComposed, in *v1beta1.CUEInput, output string, outFmt cueOutputFmt) error {
 	var (
 		data map[string]interface{}
 	)
@@ -164,9 +158,19 @@ func addResourcesTo(desired map[resource.Name]*resource.DesiredComposed, in *v1b
 		// If there are MarshalStream expressions, the output will be 'text'
 		// The streamType will determine the document formats
 		scanner := bufio.NewScanner(bytes.NewReader([]byte(output)))
-		var document string
+		var (
+			document string
+
+			streamType = outputYAML
+		)
 		for scanner.Scan() {
 			line := scanner.Text()
+			// Determine the type of document needed ot be parsed
+			// document will be "" on initialization of a new yaml or json document
+			if document == "" && strings.HasPrefix(line, "{") {
+				streamType = outputJSON
+			}
+
 			// Check if there are multiple documents
 			if streamType == outputYAML {
 				if line == fmt.Sprintf("---") {

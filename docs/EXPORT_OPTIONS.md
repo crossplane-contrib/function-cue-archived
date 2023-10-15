@@ -1,6 +1,6 @@
 # Supported Export Options
 
-`expression`
+`--expression`
 
 Configured under the `CUEInput.export.expression` field
 
