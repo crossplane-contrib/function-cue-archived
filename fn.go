@@ -85,13 +85,12 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	var (
 		outputFmt = outputJSON
 	)
-	// Multiple expressions are always a stream
-	if len(in.Export.Options.Expressions) > 1 {
-		outputFmt = outputTXT
-	}
 	// If there is only 1 epxression, check if the expression itself is a stream
 	// If so, it should also be TXT output
 	if len(in.Export.Options.Expressions) == 1 && strings.Contains(in.Export.Options.Expressions[0], "MarshalStream") {
+		outputFmt = outputTXT
+	} else if len(in.Export.Options.Expressions) > 1 {
+		// Multiple expressions are always a stream
 		outputFmt = outputTXT
 	}
 
