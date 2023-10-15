@@ -44,6 +44,7 @@ var testTable = []struct {
 	{inputCUE, functionExport, outputYAML, "\nimport \"strconv\"\n\n#portI: uint16 & >1024\n\n#portS: S={\n\tstring & =~\"^[0-9]{4,5}$\"\n\t_i:     strconv.Atoi(S)\n\t#valid: uint16 & >1024 & _i\n}\n\n#port: #portI | #portS\n\npi: #port\npi: 8080\n\nps: #portS\nps: \"1313\"\n", "pi: 8080\nps: \"1313\"\n", []string{}},
 	{inputCUE, functionExport, outputYAML, "package function\n\nimport \"strings\"\n\n// An input schema\n#Input: {\n\tcount: int\n\tmsg:   string\n}\n\n// An output schema\n#Output: {\n\tval: string\n}\n\n#Transform: {\n\t// Input for the caller\n\tX1=\"in\": #Input\n\t// output for the caller\n\tout: #Output\n\n\t// intermediate fields\n\t_upper: strings.ToUpper(X1.msg)\n\t_msg:   strings.Join([_upper]*X1.count, \" \")\n\n\t// set output\n\tout: val: _msg\n}\n\n// Call transform\nresult: #Transform & {in: {msg: \"ra\", count: 3}}\n", "result:\n  in:\n    count: 3\n    msg: ra\n  out:\n    val: RA RA RA\n", []string{}},
 	{inputCUE, functionExport, outputYAML, "a: {\n\tp?: int\n}\n\n// if b is concrete, add config\nif a.b != _|_ {\n\tb: \"found\"\n}\n\n// you can also check optional fields\nif a.p != _|_ {\n\tp: a.p & >1024\n}\n\n// if c is not concrete, add config\nif a.c == _|_ {\n\tc: \"missing\"\n}\n\n// use preference marks (defaults) for that instead\na: {\n\td: _ | *\"default\"\n}\n", "c: missing\na:\n  d: default\n", []string{}},
+	{inputCUE, functionExport, outputYAML, "test: \"20h\"\n", "true\n", []string{"time.Duration(test)"}},
 }
 
 func TestCUECompile(t *testing.T) {
@@ -64,22 +65,24 @@ func TestCUECompile(t *testing.T) {
 }
 
 var testFailTable = []struct {
-	In    cueInputFmt
-	Fn    cueFunction
-	Out   cueOutputFmt
-	InVal string
-	Err   string
+	In          cueInputFmt
+	Fn          cueFunction
+	Out         cueOutputFmt
+	InVal       string
+	Err         string
+	Expressions []string
 }{
-	{inputCUE, functionExport, outputCUE, "#Test: {\n\tName: string\n}\n\nitem: #Test & {\n\tName: 1\n}\n", "failed to validate: item.Name: conflicting values string and 1 (mismatched types string and int)"},
-	{inputCUE, functionExport, outputCUE, "import (\n\t\"noname\"\n)\n", "failed to build: builtin package \"noname\" undefined"},
-	{inputCUE, functionExport, outputJSON, "#out: test", "failed to build: reference \"test\" not found"},
-	{inputCUE, functionExport, outputJSON, "price: number\n\n// Require a justification if price is too high\nif price > 100 {\n\tjustification: string\n}\n\nprice: 200\n", "failed to validate: justification: incomplete value string"},
-	{inputCUE, functionExport, outputJSON, "a: \"foo bar\" =~ \"foo [a-z]{3}\"\nb: \"maze\" !~ \"^[a-z]{3}$\"\n\nc: =~\"^[a-z]{3}$\" // any string with lowercase ASCII of length 3\n\nd: c\nd: \"foo\"\n\ne: c\ne: \"foo bar\"\n", "failed to validate: e: invalid value \"foo bar\" (out of bound =~\"^[a-z]{3}$\")"},
-	{inputCUE, functionExport, outputJSON, "list: [ \"Cat\", \"Mouse\", \"Dog\"\n", "failed to load: missing ',' before newline in list literal"},
-	{inputCUE, functionExport, outputJSON, "list: {\n\ttest: \"things\"\n\tare: \"notok\"\n", "failed to load: expected '}', found 'EOF'"},
-	{inputCUE, functionExport, outputJSON, "X: [1, 2, 4]\n\n#X: {\n\tfor x in X {\n\t\t\"\\(x)\": x\n\t}\n}\n\n#MustHave: [3]\n\n#Xcheck: #X & {for x in #MustHave {\"\\(x)\": x}}\n", "failed to validate: #Xcheck.\"3\": field not allowed"},
-	{inputCUE, functionExport, outputJSON, "x: 0\n\nresult: [\n\tif x < 0 {\"negative\"},\n\tif x > 0 {\"positive\"},\n][0]\n", "failed to validate: result: index out of range [0] with length 0"},
-	{inputCUE, functionExport, outputJSON, "l: []\n\nresult: [\n\tif len(l) == 0 {\"empty\"},\n\tif l[0] {\"starts with true\"},\n][0]\n", "failed to validate: index out of range [0] with length 0 (and 1 more errors)"},
+	{inputCUE, functionExport, outputCUE, "#Test: {\n\tName: string\n}\n\nitem: #Test & {\n\tName: 1\n}\n", "failed to validate: item.Name: conflicting values string and 1 (mismatched types string and int)", []string{}},
+	{inputCUE, functionExport, outputCUE, "import (\n\t\"noname\"\n)\n", "failed to build: builtin package \"noname\" undefined", []string{}},
+	{inputCUE, functionExport, outputJSON, "#out: test", "failed to build: reference \"test\" not found", []string{}},
+	{inputCUE, functionExport, outputJSON, "price: number\n\n// Require a justification if price is too high\nif price > 100 {\n\tjustification: string\n}\n\nprice: 200\n", "failed to validate: justification: incomplete value string", []string{}},
+	{inputCUE, functionExport, outputJSON, "a: \"foo bar\" =~ \"foo [a-z]{3}\"\nb: \"maze\" !~ \"^[a-z]{3}$\"\n\nc: =~\"^[a-z]{3}$\" // any string with lowercase ASCII of length 3\n\nd: c\nd: \"foo\"\n\ne: c\ne: \"foo bar\"\n", "failed to validate: e: invalid value \"foo bar\" (out of bound =~\"^[a-z]{3}$\")", []string{}},
+	{inputCUE, functionExport, outputJSON, "list: [ \"Cat\", \"Mouse\", \"Dog\"\n", "failed to load: missing ',' before newline in list literal", []string{}},
+	{inputCUE, functionExport, outputJSON, "list: {\n\ttest: \"things\"\n\tare: \"notok\"\n", "failed to load: expected '}', found 'EOF'", []string{}},
+	{inputCUE, functionExport, outputJSON, "X: [1, 2, 4]\n\n#X: {\n\tfor x in X {\n\t\t\"\\(x)\": x\n\t}\n}\n\n#MustHave: [3]\n\n#Xcheck: #X & {for x in #MustHave {\"\\(x)\": x}}\n", "failed to validate: #Xcheck.\"3\": field not allowed", []string{}},
+	{inputCUE, functionExport, outputJSON, "x: 0\n\nresult: [\n\tif x < 0 {\"negative\"},\n\tif x > 0 {\"positive\"},\n][0]\n", "failed to validate: result: index out of range [0] with length 0", []string{}},
+	{inputCUE, functionExport, outputJSON, "l: []\n\nresult: [\n\tif len(l) == 0 {\"empty\"},\n\tif l[0] {\"starts with true\"},\n][0]\n", "failed to validate: index out of range [0] with length 0 (and 1 more errors)", []string{}},
+	{inputCUE, functionExport, outputJSON, "test: lower: level: \"output\"\n", "failed to validate: reference \"lower\" not found", []string{"lower"}},
 }
 
 func TestCUECompileFailures(t *testing.T) {
@@ -88,7 +91,7 @@ func TestCUECompileFailures(t *testing.T) {
 		in := v1beta1.CUEInput{
 			Export: v1beta1.Export{
 				Options: v1beta1.ExportOptions{
-					Expressions: []string{},
+					Expressions: tv.Expressions,
 				},
 				Value: tv.InVal,
 			},

@@ -12,7 +12,6 @@ import (
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/errors"
-	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
 	"cuelang.org/go/cue/token"
@@ -43,17 +42,12 @@ const (
 	outputTXT  cueOutputFmt = cueOutputFmt(inputTXT)
 )
 
-// cueCompile compiles a CUE template passed as a inputVal.  Define the cueOutputFmt, cueFunction, and cueInputFmt
+// cueCompile compiles a CUE template depending on the configuration
+// Passed in input and defined by the cueOutputFmt, cueFunction and cueInputFmt
 func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.CUEInput) (string, error) {
-	exprs := []ast.Expr{}
-	for _, expr := range input.Export.Options.Expressions {
-		if expr != "" {
-			expr, err := parser.ParseExpr("--expression", expr)
-			if err != nil {
-				return "", fmt.Errorf("failed to parse expression: %w", err)
-			}
-			exprs = append(exprs, expr)
-		}
+	exprs, err := buildExpr(input)
+	if err != nil {
+		return "", fmt.Errorf("failed to build expressions: %w", err)
 	}
 
 	loadCfg := &load.Config{
@@ -65,11 +59,16 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.
 		},
 	}
 	builds := load.Instances([]string{string(in) + ":", "-"}, loadCfg)
-	if err := builds[0].Err; err != nil {
+	if len(builds) < 1 {
+		return "", fmt.Errorf("cannot load instances: %s", string(in))
+	} else if err = builds[0].Err; err != nil {
 		return "", fmt.Errorf("failed to load: %w", err)
 	}
 
 	insts := cue.Build(builds)
+	if len(insts) < 1 {
+		return "", fmt.Errorf("cannot build instances: %+v", *builds[0])
+	}
 	inst := insts[0]
 	if err := inst.Err; err != nil {
 		return "", fmt.Errorf("failed to build: %w", err)
@@ -104,26 +103,6 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.
 		return "", fmt.Errorf("failed to build encoder: %w", err)
 	}
 
-	syn := []cue.Option{
-		cue.Docs(true),
-		cue.Attributes(true),
-		cue.Optional(true),
-		cue.Definitions(true),
-	}
-	var opts []format.Option
-	switch out {
-	case outputCUE:
-		if fn != functionDef {
-			syn = append(syn, cue.Concrete(true))
-		}
-		opts = append(opts, format.TabIndent(true))
-	case outputJSON, outputYAML:
-		opts = append(opts,
-			format.TabIndent(false),
-			format.UseSpaces(2),
-		)
-	}
-	encConf.Format = opts
 	if err := e.Encode(v); err != nil {
 		return "", fmt.Errorf("failed to encode: %w", err)
 	}
@@ -187,6 +166,21 @@ func toFile(i, v cue.Value, filename string) (*build.File, error) {
 			"could not determine file type")
 	}
 	return f, nil
+}
+
+func buildExpr(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
+	for _, expr := range input.Export.Options.Expressions {
+		if expr != "" {
+			var parsed ast.Expr
+			parsed, err = parser.ParseExpr("--expression", expr)
+			if err != nil {
+				err = fmt.Errorf("failed to parse expression: %w", err)
+				return
+			}
+			exprs = append(exprs, parsed)
+		}
+	}
+	return
 }
 
 func hasEncoding(v cue.Value) (concrete, hasDefault bool) {
