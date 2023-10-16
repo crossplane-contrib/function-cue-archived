@@ -676,15 +676,15 @@ func TestRunFunction(t *testing.T) {
 									"apiVersion": "eks.nobu.dev/v1",
 									"kind": "Cluster",
 									"metadata": {
-                                        "annotations": {
-                                            "region": "us-east-1"
-                                        },
-                                        "name": "example",
-                                        "labels": {
-                                            "app": "example",
-                                            "env": "prod",
-                                            "classification": "controlplane"
-                                        }
+										"annotations": {
+										    "region": "us-east-1"
+										},
+										"name": "example",
+										"labels": {
+										    "app": "example",
+										    "env": "prod",
+										    "classification": "controlplane"
+										}
                                     }
 								}`),
 							},
@@ -753,15 +753,15 @@ func TestRunFunction(t *testing.T) {
 									"apiVersion": "eks.nobu.dev/v1",
 									"kind": "Cluster",
 									"metadata": {
-                                        "annotations": {
-                                            "region": "us-east-1"
-                                        },
-                                        "name": "example",
-                                        "labels": {
-                                            "app": "example",
-                                            "env": "prod",
-                                            "classification": "controlplane"
-                                        }
+										"annotations": {
+										    "region": "us-east-1"
+										},
+										"name": "example",
+										"labels": {
+										    "app": "example",
+										    "env": "prod",
+										    "classification": "controlplane"
+										}
                                     }
 								}`),
 							},

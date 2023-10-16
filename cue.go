@@ -246,7 +246,6 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 		outputData  []map[string]interface{}
 	)
 	exprs, err := buildExprs(input)
-
 	if err != nil {
 		return outputData, cmpStr, fmt.Errorf("failed building expression(s): %w", err)
 	}
