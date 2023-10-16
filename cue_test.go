@@ -28,8 +28,11 @@ var testTable = []struct {
 	{outputJSON, "out: 3 * [1, 2, 3]", "{\n    \"out\": [\n        1,\n        2,\n        3,\n        1,\n        2,\n        3,\n        1,\n        2,\n        3\n    ]\n}\n", []string{}, []string{}},
 	{outputJSON, "out: 3 > 8", "{\n    \"out\": false\n}\n", []string{}, []string{}},
 	{outputJSON, "#out: \"test\"", "{}\n", []string{}, []string{}},
+	{outputJSON, "val: number @tag(val,type=int)\n", "{\n    \"val\": 3.14\n}\n", []string{}, []string{"val=3.14"}},
+	{outputJSON, "env: string @tag(env,short=prod|staging)", "{\n    \"env\": \"prod\"\n}\n", []string{}, []string{"prod"}},
 	{outputJSON, "package main\n\nenv:  string | *\"dev\" @tag(env)\nhost: \"\\(env).domain.com\"\n", "{\n    \"env\": \"prod\",\n    \"host\": \"prod.domain.com\"\n}\n", []string{}, []string{"env=prod"}},
 	{outputJSON, "package main\n\nenv:  string | *\"dev\" @tag(env)\nhost: \"\\(env).domain.com\"\n", "{\n    \"env\": \"dev\",\n    \"host\": \"dev.domain.com\"\n}\n", []string{}, []string{}},
+	{outputJSON, "#A: {\n\tx: int @protobuf(1,int64)\n\ty: int @protobuf(2,int64)\n}\n\na: #A\na: {\n\tx: 1\n\ty: x // propagation here\n}", "{\n    \"a\": {\n        \"x\": 1,\n        \"y\": 1\n    }\n}\n", []string{}, []string{}},
 	{outputJSON, "x: 0\n\nresult: [\n\tif x < 0 {\"negative\"},\n\tif x > 0 {\"positive\"},\n\t\"zero\",\n][0]\n", "{\n    \"x\": 0,\n    \"result\": \"zero\"\n}\n", []string{}, []string{}},
 	{outputJSON, "[ for x in #items if __rem(x, 2) == 0 {x * x}]\n\n#items: [ 1, 2, 3, 4, 5, 6, 7, 8, 9]\n", "[\n    4,\n    16,\n    36,\n    64\n]\n", []string{}, []string{}},
 	{outputJSON, "list: [ \"Cat\", \"Mouse\", \"Dog\" ]\n\na: *list[0] | \"None\"\nb: *list[5] | \"None\"\n\nn: [null]\nv: *(n[0]&string) | \"default\"", "{\n    \"list\": [\n        \"Cat\",\n        \"Mouse\",\n        \"Dog\"\n    ],\n    \"a\": \"Cat\",\n    \"b\": \"None\",\n    \"n\": [\n        null\n    ],\n    \"v\": \"default\"\n}\n", []string{}, []string{}},
@@ -89,6 +92,8 @@ var testFailTable = []struct {
 	{outputJSON, "l: []\n\nresult: [\n\tif len(l) == 0 {\"empty\"},\n\tif l[0] {\"starts with true\"},\n][0]\n", "failed creating cue compiler: failed to validate: index out of range [0] with length 0 (and 1 more errors)", []string{}},
 	{outputJSON, "test: lower: level: \"output\"\n", "failed creating cue compiler: failed to validate: reference \"lower\" not found", []string{"lower"}},
 	{outputJSON, "package inject\n\n// @tag() is how we inject data\nenv:      *\"dev\" | string @tag(env)      // env has a default\ndatabase: string          @tag(database) // database is \"required\"\n\n// A schema for DBs with some defaults\n#DB: {\n\thost: #hosts[env]\n\tport: string | *\"5432\"\n\tdb:   database\n\n\t// interpolate the fields into the connection string\n\tconn: \"postgres://\\(host):\\(port)/\\(db)\"\n}\n\n// setup our database host mapping\n#hosts: [string]: string\n#hosts: {\n\tdev: \"postgres.dev\"\n\tstg: \"postgres.stg\"\n\tprd: \"postgres.prd\"\n}\n", "failed creating cue compiler: failed to validate: database: incomplete value string", []string{}},
+	{outputJSON, "val: number @tag(val,type=int)\n", "failed creating cue compiler: failed to validate: val: incomplete value number", []string{}},
+	{outputJSON, "env: string @tag(env,short=prod|staging)", "failed creating cue compiler: failed to validate: env: incomplete value string", []string{}},
 }
 
 // TestCUECompileFailures for failure strings, do not attempt to parse data in these tests
