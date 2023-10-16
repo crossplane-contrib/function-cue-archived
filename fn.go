@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/function-sdk-go/resource"
 	"github.com/crossplane/function-sdk-go/resource/composed"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sort"
 	"strings"
 
@@ -89,7 +91,16 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		outputFmt = outputJSON
 	}
 
-	data, _, err := cueCompile(outputFmt, *in, compileOpts{parseData: true})
+	tags, err := buildTags(in.Export.Options.Inject, oxr)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "failed building tags"))
+		return rsp, nil
+	}
+
+	data, _, err := cueCompile(outputFmt, *in, compileOpts{
+		parseData: true,
+		tags:      tags,
+	})
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
@@ -128,6 +139,24 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		"input", in.Name)
 
 	return rsp, nil
+}
+
+func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
+	res := make([]string, len(tags))
+	for _, t := range tags {
+		fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xr)
+		if err != nil {
+			return res, errors.Wrapf(err, "cannot convert xr %q to unstructured", xr.Resource.GetName())
+		}
+
+		in, err := fieldpath.Pave(fromMap).GetValue(t.Path)
+		if err != nil {
+			return res, errors.Wrapf(err, "cannot get value from path %q", t.Path)
+		}
+
+		res = append(res, fmt.Sprintf("%s=%s", t.Name, in))
+	}
+	return res, nil
 }
 
 type exportTarget string

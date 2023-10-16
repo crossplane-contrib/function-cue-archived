@@ -1,6 +1,6 @@
 # Supported Export Options
 
-`--expression`
+`-e, --expression`
 
 Configured under the `CUEInput.export.expression` field
 
@@ -24,7 +24,43 @@ spec:
       metadata:
         name: basic
       export:
-        expression: yaml.MarshalStream(output)
+        expressions:
+        - yaml.MarshalStream(output)
+        value: |
+          output: [
+            ...
+          ]
+```
+
+`-t, --inject`
+
+
+Allows for injecting fields from the Observed XR into the cue template `@tag` fields.
+The tags injected are configured under the `CUEInput.export.tags` field
+
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: test-cue
+spec:
+  compositeTypeRef:
+    apiVersion: database.example.com/v1alpha1
+    kind: NoSQL
+  mode: Pipeline
+  pipeline:
+  - step: run-cue-function
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: basic
+      export:
+        tags:
+        - name: "name"
+          path: "metadata.name"
         value: |
           output: [
             ...
