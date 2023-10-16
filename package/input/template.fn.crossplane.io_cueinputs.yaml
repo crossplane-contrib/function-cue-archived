@@ -110,11 +110,21 @@ spec:
                 - expressions
                 - inject
                 type: object
+              target:
+                default: Resources
+                description: Target determines what object the export output should
+                  be applied to
+                enum:
+                - Existing
+                - Resources
+                - XR
+                type: string
               value:
                 description: Value is the string representation of the cue value to
                   run `cue export` against
                 type: string
             required:
+            - target
             - value
             type: object
           kind:
