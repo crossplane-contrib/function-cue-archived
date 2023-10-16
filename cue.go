@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -15,6 +17,8 @@ import (
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/parser"
 	"cuelang.org/go/cue/token"
+
+	"github.com/ghodss/yaml"
 )
 
 type cueFunction string
@@ -42,54 +46,63 @@ const (
 	outputTXT  cueOutputFmt = cueOutputFmt(inputTXT)
 )
 
-// cueCompile compiles a CUE template depending on the configuration
-// Passed in input and defined by the cueOutputFmt, cueFunction and cueInputFmt
-func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.CUEInput) (string, error) {
-	exprs, err := buildExpr(input)
-	if err != nil {
-		return "", fmt.Errorf("failed to build expressions: %w", err)
-	}
+type Compiler struct {
+	encoder *Encoder
+	data    []map[string]interface{}
+	strData []string
+	outBuf  *bytes.Buffer
+	outFmt  cueOutputFmt
+	value   cue.Value
+}
 
+func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr) (*Compiler, error) {
 	loadCfg := &load.Config{
-		Stdin:      strings.NewReader(input.Export.Value),
+		Stdin:      strings.NewReader(input),
 		Dir:        "/",
 		ModuleRoot: "/",
 		Overlay: map[string]load.Source{
 			"/cue.mod/module.cue": load.FromString(`module: "nobu.dev"`),
 		},
 	}
-	builds := load.Instances([]string{string(in) + ":", "-"}, loadCfg)
+	builds := load.Instances([]string{string(inputFmt) + ":", "-"}, loadCfg)
 	if len(builds) < 1 {
-		return "", fmt.Errorf("cannot load instances: %s", string(in))
-	} else if err = builds[0].Err; err != nil {
-		return "", fmt.Errorf("failed to load: %w", err)
+		return &Compiler{}, fmt.Errorf("cannot load instances: %s", string(inputFmt))
+	} else if err := builds[0].Err; err != nil {
+		return &Compiler{}, fmt.Errorf("failed to load: %w", err)
 	}
 
 	insts := cue.Build(builds)
 	if len(insts) < 1 {
-		return "", fmt.Errorf("cannot build instances: %+v", *builds[0])
+		return &Compiler{}, fmt.Errorf("cannot build instances: %+v", *builds[0])
 	}
 	inst := insts[0]
 	if err := inst.Err; err != nil {
-		return "", fmt.Errorf("failed to build: %w", err)
+		return &Compiler{}, fmt.Errorf("failed to build: %w", err)
 	}
 	concrete := true
-	switch out {
+	switch outputFmt {
 	case outputCUE:
 		concrete = false
 	case outputJSON, outputYAML, outputTXT:
 	default:
-		return "", fmt.Errorf("unsupported output format %q", out)
-	}
-	v := exprVal(inst.Value(), exprs)
-	if err := v.Validate(cue.Concrete(concrete)); err != nil {
-		return "", fmt.Errorf("failed to validate: %w", err)
+		return &Compiler{}, fmt.Errorf("unsupported output format: %q", outputFmt)
 	}
 
-	f, err := parseFile(string(out)+":-", Export)
+	v := inst.Value()
+	if expr != nil {
+		v = v.Context().BuildExpr(*expr,
+			cue.Scope(v),
+			cue.InferBuiltins(true),
+		)
+	}
+	if err := v.Validate(cue.Concrete(concrete)); err != nil {
+		return &Compiler{}, fmt.Errorf("failed to validate: %w", err)
+	}
+
+	f, err := parseFile(string(outputFmt)+":-", Export)
 	if err != nil {
 		var buf bytes.Buffer
-		return "", fmt.Errorf("failed to parse file from %v: %s", string(out)+":-", buf.Bytes())
+		return &Compiler{}, fmt.Errorf("failed to parse file from %v: %s", string(outputFmt)+":-", buf.Bytes())
 	}
 	var outBuf bytes.Buffer
 	encConf := &Config{
@@ -100,13 +113,184 @@ func cueCompile(in cueInputFmt, fn cueFunction, out cueOutputFmt, input v1beta1.
 	}
 	e, err := NewEncoder(f, encConf)
 	if err != nil {
-		return "", fmt.Errorf("failed to build encoder: %w", err)
+		return &Compiler{}, fmt.Errorf("failed to build encoder: %w", err)
 	}
 
-	if err := e.Encode(v); err != nil {
-		return "", fmt.Errorf("failed to encode: %w", err)
+	return &Compiler{
+		encoder: e,
+		outBuf:  &outBuf,
+		outFmt:  outputFmt,
+		value:   v,
+	}, nil
+}
+
+func (c *Compiler) Compile() error {
+	return c.encoder.Encode(c.value)
+}
+
+// String of the compiled cue template
+func (c Compiler) String() string {
+	return c.outBuf.String()
+}
+
+// Bytes of the compiled cue template
+func (c Compiler) Bytes() []byte {
+	return c.outBuf.Bytes()
+}
+
+// Parse parses the compiled cue template output stored in c.outBuf
+// Into an array of map[string]interface{}
+// It is necessary to compile into a map[string]interface{} so that it can be applied into
+// An unstructured.Unstructured{Object: map[string]interface{}}
+func (c *Compiler) Parse() ([]map[string]interface{}, error) {
+	var (
+		data map[string]interface{}
+	)
+
+	// If the current data set is not empty, return that
+	if len(c.data) != 0 {
+		return c.data, nil
 	}
-	return outBuf.String(), nil
+
+	// If there is no data, return an empty data map
+	if len(c.outBuf.Bytes()) == 0 {
+		return c.data, nil
+	}
+
+	// Otherwise parse the data
+	// If there are no expressions, expect a JSON object
+	if c.outFmt == outputJSON {
+		if err := json.Unmarshal(c.Bytes(), &data); err != nil {
+			return c.data, errors.Wrapf(err, token.NoPos, "failed unmarshalling JSON:\n%s", c.String())
+		}
+		c.data = append(c.data, data)
+	} else {
+		// If there are MarshalStream expressions, the output will be 'text'
+		// The streamType will determine the document formats
+		scanner := bufio.NewScanner(bytes.NewReader(c.Bytes()))
+		var (
+			document string
+
+			streamType = outputYAML
+		)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// Determine the type of document needed ot be parsed
+			// document will be "" on initialization of a new yaml or json document
+			if document == "" && strings.HasPrefix(line, "{") {
+				streamType = outputJSON
+			}
+
+			// Check if there are multiple documents
+			if streamType == outputYAML {
+				if line == "---" {
+					// End of document
+					if err := yaml.Unmarshal([]byte(document), &data); err != nil {
+						return c.data, errors.Wrapf(err, token.NoPos, "failed unmarshalling YAML to JSON:\n%s", document)
+					}
+					c.data = append(c.data, data)
+
+					// Reset document and data
+					document = ""
+					data = map[string]interface{}{}
+				} else {
+					document += fmt.Sprintln(line)
+				}
+			} else if streamType == outputJSON {
+				// If the line is empty skip it
+				if strings.TrimSuffix(line, "\n") == "" {
+					continue
+				}
+
+				// JSON Documents come out line by line
+				if err := json.Unmarshal([]byte(line), &data); err != nil {
+					return c.data, errors.Wrapf(err, token.NoPos, "failed unmarshalling JSON:\n%s", line)
+				}
+				c.data = append(c.data, data)
+
+				document = ""
+				data = map[string]interface{}{}
+			} else {
+				return c.data, fmt.Errorf("unknown stream type %s", streamType)
+			}
+		}
+
+		// Check if there is a document left over
+		// this is only necessary for yaml documents since they are multiline and sepaarated by ---
+		// If the multiline yaml ends with --- the document will get set to "" on sucess
+		if document != "" && streamType == outputYAML {
+			// End of document
+			if err := yaml.Unmarshal([]byte(document), &data); err != nil {
+				return c.data, errors.Wrapf(err, token.NoPos, "failed unmarshalling YAML to JSON:\n%s", document)
+			}
+			c.data = append(c.data, data)
+		}
+	}
+	return c.data, nil
+}
+
+type compileOpts struct {
+	parseData bool
+}
+
+// cueCompile compiles a CUE template depending on the CUEInput configuration
+// Passed in input and defined by the cueOutputFmt
+// Returns both an array of parsed maps of the data and string representations of the data
+func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]map[string]interface{}, string, error) {
+	var (
+		atLeastOnce = true
+		i           = 0
+		cmpStr      string
+		outputData  []map[string]interface{}
+	)
+	exprs, err := buildExprs(input)
+	if err != nil {
+		return outputData, cmpStr, fmt.Errorf("failed building expression(s): %w", err)
+	}
+	// Run at least one time
+	for atLeastOnce || i < len(exprs) {
+		var (
+			err error
+			c   *Compiler
+
+			expr *ast.Expr = nil
+		)
+		if i < len(input.Export.Options.Expressions) {
+			expr = &exprs[i]
+		}
+		c, err = NewCompiler(input.Export.Value, inputCUE, out, expr)
+		if err != nil {
+			return outputData, cmpStr, fmt.Errorf("failed creating cue compiler: %w", err)
+		}
+		if err := c.Compile(); err != nil {
+			return outputData, cmpStr, fmt.Errorf("failed compiling cue template: %w", err)
+		}
+
+		// only attempt to parse data if specified
+		if opts.parseData == true {
+			data, err := c.Parse()
+			if err != nil {
+				return outputData, cmpStr, fmt.Errorf("failed parsing cue output: %w", err)
+			}
+			outputData = append(outputData, data...)
+		}
+
+		// If there are multiple yaml documents, then separate them by ---
+		if out == outputTXT || out == outputYAML {
+			if cmpStr == "" {
+				cmpStr += c.String()
+			} else {
+				cmpStr += fmt.Sprintf("---\n%s", c.String())
+			}
+		} else if out == outputJSON || out == outputCUE {
+			// Multiple json documents do not need to be separated
+			cmpStr += c.String()
+		}
+		atLeastOnce = false
+		i++
+	}
+
+	return outputData, cmpStr, nil
 }
 
 // ParseFile parses a single-argument file specifier, such as when a file is
@@ -168,7 +352,7 @@ func toFile(i, v cue.Value, filename string) (*build.File, error) {
 	return f, nil
 }
 
-func buildExpr(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
+func buildExprs(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
 	for _, expr := range input.Export.Options.Expressions {
 		if expr != "" {
 			var parsed ast.Expr

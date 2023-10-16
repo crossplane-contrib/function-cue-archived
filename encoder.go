@@ -212,16 +212,6 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 	return e, nil
 }
 
-func exprVal(v cue.Value, exprs []ast.Expr) cue.Value {
-	for _, expr := range exprs {
-		v = v.Context().BuildExpr(expr,
-			cue.Scope(v),
-			cue.InferBuiltins(true),
-		)
-	}
-	return v
-}
-
 // MakeInstance makes a new instance from a value.
 var MakeInstance func(value interface{}) (instance interface{})
 
