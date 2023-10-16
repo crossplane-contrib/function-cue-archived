@@ -46,7 +46,7 @@ const (
 	outputTXT  cueOutputFmt = cueOutputFmt(inputTXT)
 )
 
-type Compiler struct {
+type compiler struct {
 	encoder *Encoder
 	data    []map[string]interface{}
 	strData []string
@@ -55,7 +55,7 @@ type Compiler struct {
 	value   cue.Value
 }
 
-func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr) (*Compiler, error) {
+func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr) (*compiler, error) {
 	loadCfg := &load.Config{
 		Stdin:      strings.NewReader(input),
 		Dir:        "/",
@@ -66,18 +66,18 @@ func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 	}
 	builds := load.Instances([]string{string(inputFmt) + ":", "-"}, loadCfg)
 	if len(builds) < 1 {
-		return &Compiler{}, fmt.Errorf("cannot load instances: %s", string(inputFmt))
+		return &compiler{}, fmt.Errorf("cannot load instances: %s", string(inputFmt))
 	} else if err := builds[0].Err; err != nil {
-		return &Compiler{}, fmt.Errorf("failed to load: %w", err)
+		return &compiler{}, fmt.Errorf("failed to load: %w", err)
 	}
 
 	insts := cue.Build(builds)
 	if len(insts) < 1 {
-		return &Compiler{}, fmt.Errorf("cannot build instances: %+v", *builds[0])
+		return &compiler{}, fmt.Errorf("cannot build instances: %+v", *builds[0])
 	}
 	inst := insts[0]
 	if err := inst.Err; err != nil {
-		return &Compiler{}, fmt.Errorf("failed to build: %w", err)
+		return &compiler{}, fmt.Errorf("failed to build: %w", err)
 	}
 	concrete := true
 	switch outputFmt {
@@ -85,7 +85,7 @@ func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 		concrete = false
 	case outputJSON, outputYAML, outputTXT:
 	default:
-		return &Compiler{}, fmt.Errorf("unsupported output format: %q", outputFmt)
+		return &compiler{}, fmt.Errorf("unsupported output format: %q", outputFmt)
 	}
 
 	v := inst.Value()
@@ -96,13 +96,13 @@ func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 		)
 	}
 	if err := v.Validate(cue.Concrete(concrete)); err != nil {
-		return &Compiler{}, fmt.Errorf("failed to validate: %w", err)
+		return &compiler{}, fmt.Errorf("failed to validate: %w", err)
 	}
 
 	f, err := parseFile(string(outputFmt)+":-", Export)
 	if err != nil {
 		var buf bytes.Buffer
-		return &Compiler{}, fmt.Errorf("failed to parse file from %v: %s", string(outputFmt)+":-", buf.Bytes())
+		return &compiler{}, fmt.Errorf("failed to parse file from %v: %s", string(outputFmt)+":-", buf.Bytes())
 	}
 	var outBuf bytes.Buffer
 	encConf := &Config{
@@ -113,10 +113,10 @@ func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 	}
 	e, err := NewEncoder(f, encConf)
 	if err != nil {
-		return &Compiler{}, fmt.Errorf("failed to build encoder: %w", err)
+		return &compiler{}, fmt.Errorf("failed to build encoder: %w", err)
 	}
 
-	return &Compiler{
+	return &compiler{
 		encoder: e,
 		outBuf:  &outBuf,
 		outFmt:  outputFmt,
@@ -124,17 +124,17 @@ func NewCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 	}, nil
 }
 
-func (c *Compiler) Compile() error {
+func (c *compiler) Compile() error {
 	return c.encoder.Encode(c.value)
 }
 
 // String of the compiled cue template
-func (c Compiler) String() string {
+func (c compiler) String() string {
 	return c.outBuf.String()
 }
 
 // Bytes of the compiled cue template
-func (c Compiler) Bytes() []byte {
+func (c compiler) Bytes() []byte {
 	return c.outBuf.Bytes()
 }
 
@@ -142,7 +142,7 @@ func (c Compiler) Bytes() []byte {
 // Into an array of map[string]interface{}
 // It is necessary to compile into a map[string]interface{} so that it can be applied into
 // An unstructured.Unstructured{Object: map[string]interface{}}
-func (c *Compiler) Parse() ([]map[string]interface{}, error) {
+func (c *compiler) Parse() ([]map[string]interface{}, error) {
 	var (
 		data map[string]interface{}
 	)
@@ -251,14 +251,14 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 	for atLeastOnce || i < len(exprs) {
 		var (
 			err error
-			c   *Compiler
+			c   *compiler
 
 			expr *ast.Expr = nil
 		)
 		if i < len(input.Export.Options.Expressions) {
 			expr = &exprs[i]
 		}
-		c, err = NewCompiler(input.Export.Value, inputCUE, out, expr)
+		c, err = newCompiler(input.Export.Value, inputCUE, out, expr)
 		if err != nil {
 			return outputData, cmpStr, fmt.Errorf("failed creating cue compiler: %w", err)
 		}
