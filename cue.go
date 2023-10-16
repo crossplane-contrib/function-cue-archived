@@ -55,7 +55,7 @@ type compiler struct {
 	value   cue.Value
 }
 
-func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr) (*compiler, error) {
+func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr, tags []string) (*compiler, error) {
 	loadCfg := &load.Config{
 		Stdin:      strings.NewReader(input),
 		Dir:        "/",
@@ -63,6 +63,7 @@ func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 		Overlay: map[string]load.Source{
 			"/cue.mod/module.cue": load.FromString(`module: "nobu.dev"`),
 		},
+		Tags: tags,
 	}
 	builds := load.Instances([]string{string(inputFmt) + ":", "-"}, loadCfg)
 	if len(builds) < 1 {
@@ -231,6 +232,7 @@ func (c *compiler) Parse() ([]map[string]interface{}, error) {
 
 type compileOpts struct {
 	parseData bool
+	tags      []string
 }
 
 // cueCompile compiles a CUE template depending on the CUEInput configuration
@@ -258,7 +260,7 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 		if i < len(input.Export.Options.Expressions) {
 			expr = &exprs[i]
 		}
-		c, err = newCompiler(input.Export.Value, inputCUE, out, expr)
+		c, err = newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
 		if err != nil {
 			return outputData, cmpStr, fmt.Errorf("failed creating cue compiler: %w", err)
 		}

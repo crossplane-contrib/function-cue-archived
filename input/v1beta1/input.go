@@ -45,7 +45,8 @@ type ExportOptions struct {
 	// Force overwriting existing files
 	Force bool `json:"force,omitempty"`
 	// Inject set the value of a tagged field
-	Inject []string `json:"inject,omitempty"`
+	// +kubebuilder:default:=[]
+	Inject []Tag `json:"inject"`
 	// InjectVars inject system variables in tags
 	InjectVars []string `json:"inject_vars,omitempty"`
 	// List concatenate multiple objects into a list
@@ -70,4 +71,13 @@ type ExportOptions struct {
 	Schema string `json:"schema,omitempty"`
 	// WithContext import as object with contextual data
 	WithContext bool `json:"with_context,omitempty"`
+}
+
+type Tag struct {
+	// Name of the tag
+	// Left side of '=' in `cue export --inject`
+	Name string `json:"name"`
+	// Path of the tag on the XR to inject from
+	// Evaluates to the Right side of '=' in `cue export --inject`
+	Path string `json:"path"`
 }

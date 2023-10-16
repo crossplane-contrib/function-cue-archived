@@ -45,9 +45,22 @@ spec:
                     description: Force overwriting existing files
                     type: boolean
                   inject:
+                    default: '[]'
                     description: Inject set the value of a tagged field
                     items:
-                      type: string
+                      properties:
+                        name:
+                          description: Name of the tag Left side of '=' in `cue export
+                            --inject`
+                          type: string
+                        path:
+                          description: Path of the tag on the XR to inject from Evaluates
+                            to the Right side of '=' in `cue export --inject`
+                          type: string
+                      required:
+                      - name
+                      - path
+                      type: object
                     type: array
                   inject_vars:
                     description: InjectVars inject system variables in tags
@@ -95,6 +108,7 @@ spec:
                     type: boolean
                 required:
                 - expressions
+                - inject
                 type: object
               value:
                 description: Value is the string representation of the cue value to

@@ -623,6 +623,153 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+		"TagInjection": {
+			reason: "Injections from XR should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "injection"
+						},
+						"export": {
+							"options": {
+								"inject": [
+									{
+										"name": "env",
+										"path": "spec.env"
+									}
+								]
+							},
+							"value": "#env: string @tag(env)\n\napiVersion: \"eks.nobu.dev/v1\"\nkind:       \"Cluster\"\nmetadata: {\n\tannotations: {\n\t\tregion: \"us-east-1\"\n\t}\n\tname: \"example\"\n\tlabels: {\n\t\tapp:            \"example\"\n\t\tenv:            #env\n\t\tclassification: \"controlplane\"\n\t}\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod"}}`),
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod"}}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example:Cluster\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod"}}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"injection": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "eks.nobu.dev/v1",
+									"kind": "Cluster",
+									"metadata": {
+										"annotations": {
+											"region": "us-east-1"
+										},
+										"name": "example",
+										"labels": {
+											"app": "example",
+											"env": "prod",
+											"classification": "controlplane"
+										}
+                                    }
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		"InjectionsWithExpressions": {
+			reason: "Injections combined with Expressions from XR should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "injectionexpression"
+						},
+						"export": {
+							"options": {
+								"inject": [
+									{
+										"name": "env",
+										"path": "spec.env"
+									},
+									{
+										"name": "region",
+										"path": "spec.region"
+									}
+								],
+								"expressions": [
+									"cluster.example"
+								]
+							},
+							"value": "#env:    string @tag(env,short=development|staging|production)\n#region: string @tag(region)\n\ncluster: [ID=_]: {\n\tapiVersion: \"eks.nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: ID\n\tmetadata: labels: {\n\t\tapp:            ID\n\t\tenv:            #env\n\t\tclassification: string\n\t}\n\t// we always have one namesake container\n}\ncluster: example: metadata: {\n\tannotations: {\n\t\t\"region\": #region\n\t}\n\tlabels: {\n\t\t\"classification\": \"controlplane\"\n\t}\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod", "region":"us-east-1"}}`),
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod", "region":"us-east-1"}}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example:Cluster\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod", "region":"us-east-1"}}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"injectionexpression": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "eks.nobu.dev/v1",
+									"kind": "Cluster",
+									"metadata": {
+										"annotations": {
+											"region": "us-east-1"
+										},
+										"name": "example",
+										"labels": {
+											"app": "example",
+											"env": "prod",
+											"classification": "controlplane"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range cases {
