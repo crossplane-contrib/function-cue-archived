@@ -635,12 +635,12 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"options": {
-                                "inject": [
-                                    {
-                                       "name": "env",
-                                       "path": "spec.env"
-                                    }
-                                ]
+								"inject": [
+									{
+										"name": "env",
+										"path": "spec.env"
+									}
+								]
 							},
 							"value": "#env: string @tag(env)\n\napiVersion: \"eks.nobu.dev/v1\"\nkind:       \"Cluster\"\nmetadata: {\n\tannotations: {\n\t\tregion: \"us-east-1\"\n\t}\n\tname: \"example\"\n\tlabels: {\n\t\tapp:            \"example\"\n\t\tenv:            #env\n\t\tclassification: \"controlplane\"\n\t}\n}\n"
 						}
@@ -705,19 +705,19 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"options": {
-                                "inject": [
-                                    {
-                                       "name": "env",
-                                       "path": "spec.env"
-                                    },
-                                    {
-                                       "name": "region",
-                                       "path": "spec.region"
-                                    }
-                                ],
-                                "expressions": [
-                                    "cluster.example"
-                                ]
+								"inject": [
+									{
+									   "name": "env",
+									   "path": "spec.env"
+									},
+									{
+									   "name": "region",
+									   "path": "spec.region"
+									}
+								],
+								"expressions": [
+									"cluster.example"
+								]
 							},
 							"value": "#env:    string @tag(env,short=development|staging|production)\n#region: string @tag(region)\n\ncluster: [ID=_]: {\n\tapiVersion: \"eks.nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: ID\n\tmetadata: labels: {\n\t\tapp:            ID\n\t\tenv:            #env\n\t\tclassification: string\n\t}\n\t// we always have one namesake container\n}\ncluster: example: metadata: {\n\tannotations: {\n\t\t\"region\": #region\n\t}\n\tlabels: {\n\t\t\"classification\": \"controlplane\"\n\t}\n}\n"
 						}
@@ -762,7 +762,7 @@ func TestRunFunction(t *testing.T) {
 										    "env": "prod",
 										    "classification": "controlplane"
 										}
-                                    }
+									}
 								}`),
 							},
 						},
