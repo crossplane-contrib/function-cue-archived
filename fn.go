@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/crossplane/function-sdk-go/resource"
+	"github.com/crossplane/function-sdk-go/resource/composed"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sort"
 	"strings"
 
@@ -15,12 +15,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	fnv1beta1 "github.com/crossplane/function-sdk-go/proto/v1beta1"
 	"github.com/crossplane/function-sdk-go/request"
-	"github.com/crossplane/function-sdk-go/resource"
-	"github.com/crossplane/function-sdk-go/resource/composed"
 	"github.com/crossplane/function-sdk-go/response"
-	"github.com/ghodss/yaml"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Function returns whatever response you ask it to.
@@ -91,16 +86,16 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		outputFmt = outputTXT
 	} else if len(in.Export.Options.Expressions) > 1 {
 		// Multiple expressions are always a stream
-		outputFmt = outputTXT
+		outputFmt = outputJSON
 	}
 
-	cmpOut, err := cueCompile(inputCUE, functionExport, outputFmt, *in)
+	data, _, err := cueCompile(outputFmt, *in, compileOpts{parseData: true})
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
 	}
 
-	if err := addResourcesTo(desired, in, cmpOut, outputFmt); err != nil {
+	if err := addResourcesTo(desired, in.Name, data); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to desired"))
 		return rsp, nil
 	}
@@ -116,10 +111,10 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 
 	successTargets := make([]string, len(desired))
-	i := 0
+	j := 0
 	for _, r := range desired {
-		successTargets[i] = fmt.Sprintf("%s:%s", r.Resource.GetName(), r.Resource.GetKind())
-		i++
+		successTargets[j] = fmt.Sprintf("%s:%s", r.Resource.GetName(), r.Resource.GetKind())
+		j++
 	}
 	sort.Strings(successTargets)
 	for _, target := range successTargets {
@@ -135,104 +130,44 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	return rsp, nil
 }
 
-func addResourcesTo(desired map[resource.Name]*resource.DesiredComposed, in *v1beta1.CUEInput, output string, outFmt cueOutputFmt) error {
-	var (
-		data map[string]interface{}
-	)
-	// If there are no expressions, expect a JSON object
-	if outFmt == outputJSON {
-		if err := json.Unmarshal([]byte(output), &data); err != nil {
-			return errors.Wrapf(err, "failed unmarshalling JSON:\n%s", output)
-		}
+type exportTarget string
 
-		name := resource.Name(in.Name)
-		desired[name] = &resource.DesiredComposed{
-			Resource: &composed.Unstructured{
-				Unstructured: unstructured.Unstructured{
-					Object: data,
-				},
-			},
-		}
-	} else {
-		// If there are MarshalStream expressions, the output will be 'text'
-		// The streamType will determine the document formats
-		scanner := bufio.NewScanner(bytes.NewReader([]byte(output)))
-		var (
-			document string
+const (
+	targetXR                exportTarget = "XR"
+	targetNewResources      exportTarget = "Resources"
+	targetExistingResources exportTarget = "Existing"
+)
 
-			streamType = outputYAML
-		)
-		for scanner.Scan() {
-			line := scanner.Text()
-			// Determine the type of document needed ot be parsed
-			// document will be "" on initialization of a new yaml or json document
-			if document == "" && strings.HasPrefix(line, "{") {
-				streamType = outputJSON
+// addResourcesTo adds the given data to any allowed object passed
+// Will return err if the object is not of a supported type
+// For 'desired' composed resources, the basename is used for the resource name
+// For 'xr' resources, the basename must match the xr name
+// For 'existing' resources, the basename must match the resource name
+func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}) error {
+	o := any(obj)
+	switch o.(type) {
+	case map[resource.Name]*resource.DesiredComposed:
+		desired := o.(map[resource.Name]*resource.DesiredComposed)
+		name := resource.Name(basename)
+		for _, d := range data {
+			u := unstructured.Unstructured{
+				Object: d,
 			}
 
-			// Check if there are multiple documents
-			if streamType == outputYAML {
-				if line == fmt.Sprintf("---") {
-					// End of document
-					if err := yaml.Unmarshal([]byte(document), &data); err != nil {
-						return errors.Wrapf(err, "failed unmarshalling YAML to JSON:\n%s", document)
-					}
-
-					tmp := unstructured.Unstructured{Object: data}
-					name := resource.Name(in.Name + "-" + tmp.GetName())
-					desired[name] = &resource.DesiredComposed{
-						Resource: &composed.Unstructured{
-							Unstructured: tmp,
-						},
-					}
-					// Reset document and data
-					document = ""
-					data = map[string]interface{}{}
-				} else {
-					document += fmt.Sprintln(line)
-				}
-			} else if streamType == outputJSON {
-				// If the line is empty skip it
-				if strings.TrimSuffix(line, "\n") == "" {
-					continue
-				}
-
-				// JSON Documents come out line by line
-				if err := json.Unmarshal([]byte(line), &data); err != nil {
-					return errors.Wrapf(err, "failed unmarshalling JSON:\n%s", line)
-				}
-
-				tmp := unstructured.Unstructured{Object: data}
-				name := resource.Name(in.Name + "-" + tmp.GetName())
-				desired[name] = &resource.DesiredComposed{
-					Resource: &composed.Unstructured{
-						Unstructured: tmp,
-					},
-				}
-				document = ""
-				data = map[string]interface{}{}
-			} else {
-				return fmt.Errorf("unknown stream type %s", streamType)
+			// If there are multiple resources to add
+			// Add the resource name as a suffix to the basename
+			if len(data) > 1 {
+				name = resource.Name(fmt.Sprintf("%s-%s", basename, u.GetName()))
 			}
-		}
-
-		// Check if there is a document left over
-		// this is only necessary for yaml documents since they are multiline and sepaarated by ---
-		// If the multiline yaml ends with --- the document will get set to "" on sucess
-		if document != "" && streamType == outputYAML {
-			// End of document
-			if err := yaml.Unmarshal([]byte(document), &data); err != nil {
-				return errors.Wrapf(err, "failed unmarshalling YAML to JSON:\n%s", document)
-			}
-
-			tmp := unstructured.Unstructured{Object: data}
-			name := resource.Name(in.Name + "-" + tmp.GetName())
 			desired[name] = &resource.DesiredComposed{
 				Resource: &composed.Unstructured{
-					Unstructured: tmp,
+					Unstructured: u,
 				},
 			}
 		}
+		// TODO Add additional cases
+	default:
+		return fmt.Errorf("cannot add configuration to %T: invalid type for obj", obj)
 	}
 	return nil
 }

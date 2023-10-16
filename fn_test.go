@@ -358,107 +358,88 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
-		// TODO Fix multiple expressions
-		// "MultipleExpressions": {
-		// 	reason: "CUE Expressions should work",
-		// 	args: args{
-		// 		req: &fnv1beta1.RunFunctionRequest{
-		// 			Input: resource.MustStructJSON(`{
-		// 				"apiVersion": "dummy.fn.crossplane.io",
-		// 				"kind": "dummy",
-		// 				"metadata": {
-		// 					"name": "expression"
-		// 				},
-		// 				"export": {
-		// 					"options": {
-		// 						"expressions": [
-		// 							"cluster",
-		// 							"nodepool",
-		// 							"vpc"
-		// 						]
-		// 					},
-		// 					"value": "cluster: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: \"example-cluster\"\n}\nnodepool: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Nodepool\"\n\tmetadata: name: \"example-nodepool\"\n}\nvpc: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Vpc\"\n\tmetadata: name: \"example-vpc\"\n}\n"
-		// 				}
-		// 			}`),
-		// 			Observed: &fnv1beta1.State{
-		// 				Composite: &fnv1beta1.Resource{
-		// 					Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	want: want{
-		// 		rsp: &fnv1beta1.RunFunctionResponse{
-		// 			Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
-		// 			Results: []*fnv1beta1.Result{
-		// 				{
-		// 					Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-		// 					Message:  "created resource \"example-cluster:Cluster\"",
-		// 				},
-		// 				{
-		// 					Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-		// 					Message:  "created resource \"example-nodepool:Nodepool\"",
-		// 				},
-		// 				{
-		// 					Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-		// 					Message:  "created resource \"example-vpc:Vpc\"",
-		// 				},
-		// 			},
-		// 			Desired: &fnv1beta1.State{
-		// 				Composite: &fnv1beta1.Resource{
-		// 					Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
-		// 				},
-		// 				Resources: map[string]*fnv1beta1.Resource{
-		// 					"expression-example-cluster": {
-		// 						Resource: resource.MustStructJSON(`{
-		// 							"apiVersion": "nobu.dev/v1",
-		// 							"kind": "Cluster",
-		// 							"metadata": {
-		// 							    "name": "example-cluster"
-		// 							}
-		// 						}`),
-		// 					},
-		// 					"expression-example-nodepool": {
-		// 						Resource: resource.MustStructJSON(`{
-		// 							"apiVersion": "nobu.dev/v1",
-		// 							"kind": "Nodepool",
-		// 							"metadata": {
-		// 							    "name": "example-nodepool"
-		// 							}
-		// 						}`),
-		// 					},
-		// 					"expression-example-vpc": {
-		// 						Resource: resource.MustStructJSON(`{
-		// 							"apiVersion": "nobu.dev/v1",
-		// 							"kind": "Vpc",
-		// 							"metadata": {
-		// 							    "name": "example-vpc"
-		// 							}
-		// 						}`),
-		// 					},
-		// 					"expression-example-rds": {
-		// 						Resource: resource.MustStructJSON(`{
-		// 							"apiVersion": "nobu.dev/v1",
-		// 							"kind": "Rds",
-		// 							"metadata": {
-		// 							    "name": "example-rds"
-		// 							}
-		// 						}`),
-		// 					},
-		// 					"expression-example-subnet": {
-		// 						Resource: resource.MustStructJSON(`{
-		// 							"apiVersion": "nobu.dev/v1",
-		// 							"kind": "Subnet",
-		// 							"metadata": {
-		// 							    "name": "example-subnet"
-		// 							}
-		// 						}`),
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+		"MultipleExpressions": {
+			reason: "CUE Expressions should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"cluster",
+									"nodepool",
+									"vpc"
+								]
+							},
+							"value": "cluster: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: \"example-cluster\"\n}\nnodepool: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Nodepool\"\n\tmetadata: name: \"example-nodepool\"\n}\nvpc: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Vpc\"\n\tmetadata: name: \"example-vpc\"\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example-cluster:Cluster\"",
+						},
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example-nodepool:Nodepool\"",
+						},
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"example-vpc:Vpc\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"expression-example-cluster": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Cluster",
+									"metadata": {
+									    "name": "example-cluster"
+									}
+								}`),
+							},
+							"expression-example-nodepool": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Nodepool",
+									"metadata": {
+									    "name": "example-nodepool"
+									}
+								}`),
+							},
+							"expression-example-vpc": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Vpc",
+									"metadata": {
+									    "name": "example-vpc"
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
 		"ManyObjects": {
 			reason: "CUE Expressions should work",
 			args: args{
