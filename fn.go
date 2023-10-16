@@ -143,8 +143,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 
 func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 	res := make([]string, len(tags))
-	for _, t := range tags {
-		fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xr)
+	for i, t := range tags {
+		fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xr.Resource)
 		if err != nil {
 			return res, errors.Wrapf(err, "cannot convert xr %q to unstructured", xr.Resource.GetName())
 		}
@@ -154,7 +154,7 @@ func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 			return res, errors.Wrapf(err, "cannot get value from path %q", t.Path)
 		}
 
-		res = append(res, fmt.Sprintf("%s=%s", t.Name, in))
+		res[i] = fmt.Sprintf("%s=%s", t.Name, in)
 	}
 	return res, nil
 }
