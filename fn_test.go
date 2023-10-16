@@ -677,13 +677,13 @@ func TestRunFunction(t *testing.T) {
 									"kind": "Cluster",
 									"metadata": {
 										"annotations": {
-										    "region": "us-east-1"
+											"region": "us-east-1"
 										},
 										"name": "example",
 										"labels": {
-										    "app": "example",
-										    "env": "prod",
-										    "classification": "controlplane"
+											"app": "example",
+											"env": "prod",
+											"classification": "controlplane"
 										}
                                     }
 								}`),
@@ -707,12 +707,12 @@ func TestRunFunction(t *testing.T) {
 							"options": {
 								"inject": [
 									{
-									   "name": "env",
-									   "path": "spec.env"
+										"name": "env",
+										"path": "spec.env"
 									},
 									{
-									   "name": "region",
-									   "path": "spec.region"
+										"name": "region",
+										"path": "spec.region"
 									}
 								],
 								"expressions": [
@@ -754,13 +754,13 @@ func TestRunFunction(t *testing.T) {
 									"kind": "Cluster",
 									"metadata": {
 										"annotations": {
-										    "region": "us-east-1"
+											"region": "us-east-1"
 										},
 										"name": "example",
 										"labels": {
-										    "app": "example",
-										    "env": "prod",
-										    "classification": "controlplane"
+											"app": "example",
+											"env": "prod",
+											"classification": "controlplane"
 										}
 									}
 								}`),
