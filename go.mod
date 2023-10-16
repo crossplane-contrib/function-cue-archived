@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	cuelang.org/go v0.6.0
-	github.com/alecthomas/kong v0.8.0
+	github.com/alecthomas/kong v0.8.1
 	github.com/crossplane/crossplane-runtime v1.13.0
 	github.com/crossplane/function-sdk-go v0.0.0-20230930011419-ec31b88ab696
 	github.com/ghodss/yaml v1.0.0
