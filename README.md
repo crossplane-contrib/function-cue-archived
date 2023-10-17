@@ -6,7 +6,7 @@ Supports `cue export` based off a string template past into the Compositions `ex
 
 The resulting Export is added to the Desired State of the XR
 
-This function is based heavily on [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go) and [cmd](https://github.com/cue-lang/cue/tree/master/cmd/cue-export)
+This function is based heavily on [/play](https://cuelang.org/play) [codebase](https://github.com/cue-lang/cuelang.org/blob/master/play/main.go) and [cmd](https://github.com/cue-lang/cue/blob/master/cmd/cue/cmd/export.go)
 
 ## CUE Version supported
 

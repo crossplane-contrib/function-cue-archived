@@ -9,7 +9,6 @@ import (
 	"github.com/Mitsuwa/function-cue/input/v1beta1"
 
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
-	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	fnv1beta1 "github.com/crossplane/function-sdk-go/proto/v1beta1"
 	"github.com/crossplane/function-sdk-go/request"
@@ -18,7 +17,6 @@ import (
 	"github.com/crossplane/function-sdk-go/response"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Function returns whatever response you ask it to.
@@ -29,6 +27,19 @@ type Function struct {
 }
 
 // RunFunction runs the Function.
+//
+// ** Compilation **
+//
+// # Run cueCompile and get the output
+// # Based off of cue CUEInput.Export.Value stored in the request
+//
+//	** Targeting **
+//
+// # Controlled by CUEInput.Export.Target
+//
+// Add this data to either the Observed XR,
+// Specific Existing Desired XRs,
+// Or new DesiredComposed resources are created,
 func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequest) (*fnv1beta1.RunFunctionResponse, error) {
 	log := f.log.WithValues("tag", req.GetMeta().GetTag())
 	log.Info("Running Function")
@@ -66,13 +77,6 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	dxr.Resource.SetAPIVersion(oxr.Resource.GetAPIVersion())
 	dxr.Resource.SetKind(oxr.Resource.GetKind())
 
-	// The composed resources that actually exist.
-	// observed, err := request.GetObservedComposedResources(req)
-	// if err != nil {
-	// 	response.Fatal(rsp, errors.Wrapf(err, "cannot get observed composed resources from %T", req))
-	// 	return rsp, nil
-	// }
-
 	// The composed resources desired by any previous Functions in the pipeline.
 	desired, err := request.GetDesiredComposedResources(req)
 	if err != nil {
@@ -83,7 +87,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	var (
 		outputFmt = outputJSON
 	)
-	// If there is only 1 epxression, check if the expression itself is a stream
+	// If there is only 1 expression, check if the expression itself is a stream
 	// If so, it should also be TXT output
 	if len(in.Export.Options.Expressions) == 1 && strings.Contains(in.Export.Options.Expressions[0], "MarshalStream") {
 		outputFmt = outputTXT
@@ -91,7 +95,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		// Multiple expressions are always a stream
 		outputFmt = outputJSON
 	}
-
+	// Build the cue (-t --inject) tags off of values from the Observed XR
 	tags, err := buildTags(in.Export.Options.Inject, oxr)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed building tags"))
@@ -127,7 +131,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = dxr
 		output.msgCount = 1
 	case v1beta1.Existing:
-		if err := addResourcesTo(desired, "", data); err != nil {
+		resources, err := matchResources(desired, data)
+		if err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
+			return rsp, nil
+		}
+
+		if err := addResourcesTo(resources, "", data); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
 			return rsp, nil
 		}
@@ -144,6 +154,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.msgCount = len(data)
 	}
 
+	// Set dxr and desired state
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composite resource in %T", rsp))
 		return rsp, nil
@@ -154,6 +165,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
+	// Output success
 	output.setSuccessMsgs()
 	for _, msg := range output.msgs {
 		rsp.Results = append(rsp.Results, &fnv1beta1.Result{
@@ -166,6 +178,47 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		"input", in.Name)
 
 	return rsp, nil
+}
+
+// desiredMatch is used to match a list of data to apply to a desired resource
+// This is used when targeting Existing
+type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
+
+// matchResources finds and associates the data to the desired resource
+// The length of the passed data should match the total count of desired match data
+func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []map[string]interface{}) (desiredMatch, error) {
+	find := func(desired map[resource.Name]*resource.DesiredComposed, name, kind string) *resource.DesiredComposed {
+		for _, d := range desired {
+			if d.Resource.GetName() == name && d.Resource.GetKind() == kind {
+				return d
+			}
+		}
+		return nil
+	}
+
+	matches := make(desiredMatch)
+	for _, d := range data {
+		u := unstructured.Unstructured{Object: d}
+		found := find(desired, u.GetName(), u.GetKind())
+		if found != nil {
+			if _, ok := matches[found]; !ok {
+				matches[found] = []map[string]interface{}{d}
+			} else {
+				matches[found] = append(matches[found], d)
+			}
+		}
+	}
+
+	count := 0
+	for _, v := range matches {
+		count += len(v)
+	}
+
+	if count != len(data) {
+		return nil, fmt.Errorf("failed to match all resources")
+	}
+
+	return matches, nil
 }
 
 type successOutput struct {
@@ -202,26 +255,6 @@ func (output *successOutput) setSuccessMsgs() {
 	sort.Strings(output.msgs)
 }
 
-// buildTags builds the tags to be injected into the cue template
-// Values are gathered from the Observed XR
-func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
-	res := make([]string, len(tags))
-	for i, t := range tags {
-		fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xr.Resource)
-		if err != nil {
-			return res, errors.Wrapf(err, "cannot convert xr %q to unstructured", xr.Resource.GetName())
-		}
-
-		in, err := fieldpath.Pave(fromMap).GetValue(t.Path)
-		if err != nil {
-			return res, errors.Wrapf(err, "cannot get value from path %q", t.Path)
-		}
-
-		res[i] = fmt.Sprintf("%s=%s", t.Name, in)
-	}
-	return res, nil
-}
-
 // addResourcesTo adds the given data to any allowed object passed
 // Will return err if the object is not of a supported type
 // For 'desired' composed resources, the basename is used for the resource name
@@ -250,11 +283,16 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 				},
 			}
 		}
-	case *resource.DesiredComposed:
+	case desiredMatch:
 		// Existing
-		for _, d := range data {
-			if err := setData(d, "", o); err != nil {
-				return errors.Wrap(err, "cannot set data on xr")
+		matches := o.(desiredMatch)
+		// Set the Match data on the desired resource stored as keys
+		for obj, matchData := range matches {
+			// There may be multiple data patches
+			for _, d := range matchData {
+				if err := setData(d, "", obj); err != nil {
+					return errors.Wrap(err, "cannot set data on xr")
+				}
 			}
 		}
 	case *resource.Composite:
@@ -294,13 +332,14 @@ func setData[T any](data interface{}, path string, t T) error {
 		o := any(t)
 		switch o.(type) {
 		case *resource.DesiredComposed:
+			obj := o.(*resource.DesiredComposed).Resource
 			if path == ".apiVersion" {
-				o.(*resource.DesiredComposed).Resource.SetAPIVersion(data.(string))
+				obj.SetAPIVersion(data.(string))
 			} else if path == ".kind" {
-				o.(*resource.DesiredComposed).Resource.SetKind(data.(string))
+				obj.SetKind(data.(string))
 			} else {
 				path = strings.TrimPrefix(path, ".")
-				if err := o.(*resource.DesiredComposed).Resource.SetValue(path, data); err != nil {
+				if err := obj.SetValue(path, data); err != nil {
 					return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
 				}
 			}
