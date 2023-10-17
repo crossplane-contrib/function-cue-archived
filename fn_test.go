@@ -836,6 +836,51 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+		"PatchXRKind": {
+			reason: "XR Targetting should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "xr-overwrite"
+						},
+						"export": {
+							"target": "XR",
+							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "updated xr \"example:Overwrite\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"Overwrite","metadata":{"name":"example"}}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range cases {

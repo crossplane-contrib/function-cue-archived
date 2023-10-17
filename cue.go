@@ -5,6 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
+	"github.com/crossplane/function-sdk-go/resource"
+	"k8s.io/apimachinery/pkg/runtime"
 	"path/filepath"
 	"strings"
 
@@ -354,6 +357,27 @@ func toFile(i, v cue.Value, filename string) (*build.File, error) {
 	return f, nil
 }
 
+// buildTags builds the tags to be injected into the cue template
+// Values are gathered from the Observed XR
+func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
+	res := make([]string, len(tags))
+	for i, t := range tags {
+		fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(xr.Resource)
+		if err != nil {
+			return res, errors.Wrapf(err, token.NoPos, "cannot convert xr %q to unstructured", xr.Resource.GetName())
+		}
+
+		in, err := fieldpath.Pave(fromMap).GetValue(t.Path)
+		if err != nil {
+			return res, errors.Wrapf(err, token.NoPos, "cannot get value from path %q", t.Path)
+		}
+
+		res[i] = fmt.Sprintf("%s=%s", t.Name, in)
+	}
+	return res, nil
+}
+
+// buildExprs takes input from the CUEInput and builds cue compatible expressions to be passed to the cue compiler
 func buildExprs(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
 	for _, expr := range input.Export.Options.Expressions {
 		if expr != "" {
