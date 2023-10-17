@@ -5,7 +5,10 @@
 package v1beta1
 
 import (
+	"fmt"
+
 	"cuelang.org/go/cue/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,6 +28,18 @@ func (in CUEInput) Validate() error {
 	if in.Export.Value == "" {
 		return errors.New("value cannot be empty")
 	}
+
+	allowedTarget := false
+	for _, target := range []Target{Existing, Resources, XR} {
+		if target == in.Export.Target {
+			allowedTarget = true
+			break
+		}
+	}
+	if !allowedTarget {
+		return fmt.Errorf("invalid target %s", in.Export.Target)
+	}
+
 	return nil
 }
 

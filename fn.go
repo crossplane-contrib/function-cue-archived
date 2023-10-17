@@ -98,6 +98,10 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
+	// Run cueCompile to get the output
+	// Ignore the string output because it is already parsed with
+	// parseData: true
+	// The output used is produced as []map[string]interface{}
 	data, _, err := cueCompile(outputFmt, *in, compileOpts{
 		parseData: true,
 		tags:      tags,
@@ -107,9 +111,37 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
-	if err := addResourcesTo(desired, in.Name, data); err != nil {
-		response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to desired"))
-		return rsp, nil
+	// Add the compiled data to the desired resources
+	// Based on the input target
+	// Store the objects into the output object
+	// For success messages later
+	output := successOutput{
+		target: in.Export.Target,
+	}
+	switch output.target {
+	case v1beta1.XR:
+		if err := addResourcesTo(dxr, "", data); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to XR"))
+			return rsp, nil
+		}
+		output.object = dxr
+		output.msgCount = 1
+	case v1beta1.Existing:
+		if err := addResourcesTo(desired, "", data); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
+			return rsp, nil
+		}
+		output.object = data
+		output.msgCount = len(data)
+	case v1beta1.Resources:
+		if err := addResourcesTo(desired, in.Name, data); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
+			return rsp, nil
+		}
+		// Pass data here instead of desired
+		// This is because there already may be desired objects
+		output.object = data
+		output.msgCount = len(data)
 	}
 
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
@@ -122,17 +154,11 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 
-	successTargets := make([]string, len(desired))
-	j := 0
-	for _, r := range desired {
-		successTargets[j] = fmt.Sprintf("%s:%s", r.Resource.GetName(), r.Resource.GetKind())
-		j++
-	}
-	sort.Strings(successTargets)
-	for _, target := range successTargets {
+	output.setSuccessMsgs()
+	for _, msg := range output.msgs {
 		rsp.Results = append(rsp.Results, &fnv1beta1.Result{
 			Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-			Message:  fmt.Sprintf("created resource %q", target),
+			Message:  msg,
 		})
 	}
 
@@ -142,6 +168,42 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	return rsp, nil
 }
 
+type successOutput struct {
+	target   v1beta1.Target
+	object   any
+	msgCount int
+	msgs     []string
+}
+
+// setSuccessMsgs generates the success messages for the input data
+func (output *successOutput) setSuccessMsgs() {
+	output.msgs = make([]string, output.msgCount)
+	switch output.target {
+	case v1beta1.Resources:
+		desired := output.object.([]map[string]interface{})
+		j := 0
+		for _, d := range desired {
+			u := unstructured.Unstructured{Object: d}
+			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
+			j++
+		}
+	case v1beta1.Existing:
+		desired := output.object.([]map[string]interface{})
+		j := 0
+		for _, d := range desired {
+			u := unstructured.Unstructured{Object: d}
+			output.msgs[j] = fmt.Sprintf("updated resource \"%s:%s\"", u.GetName(), u.GetKind())
+			j++
+		}
+	case v1beta1.XR:
+		o := output.object.(*resource.Composite)
+		output.msgs[0] = fmt.Sprintf("updated xr \"%s:%s\"", o.Resource.GetName(), o.Resource.GetKind())
+	}
+	sort.Strings(output.msgs)
+}
+
+// buildTags builds the tags to be injected into the cue template
+// Values are gathered from the Observed XR
 func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 	res := make([]string, len(tags))
 	for i, t := range tags {
@@ -160,14 +222,6 @@ func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 	return res, nil
 }
 
-type exportTarget string
-
-const (
-	targetXR                exportTarget = "XR"
-	targetNewResources      exportTarget = "Resources"
-	targetExistingResources exportTarget = "Existing"
-)
-
 // addResourcesTo adds the given data to any allowed object passed
 // Will return err if the object is not of a supported type
 // For 'desired' composed resources, the basename is used for the resource name
@@ -177,6 +231,7 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 	o := any(obj)
 	switch o.(type) {
 	case map[resource.Name]*resource.DesiredComposed:
+		// Resources
 		desired := o.(map[resource.Name]*resource.DesiredComposed)
 		name := resource.Name(basename)
 		for _, d := range data {
@@ -195,9 +250,74 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 				},
 			}
 		}
-		// TODO Add additional cases
+	case *resource.DesiredComposed:
+		// Existing
+		for _, d := range data {
+			if err := setData(d, "", o); err != nil {
+				return errors.Wrap(err, "cannot set data on xr")
+			}
+		}
+	case *resource.Composite:
+		// XR
+		for _, d := range data {
+			if err := setData(d, "", o); err != nil {
+				return errors.Wrap(err, "cannot set data on xr")
+			}
+		}
 	default:
 		return fmt.Errorf("cannot add configuration to %T: invalid type for obj", obj)
+	}
+	return nil
+}
+
+// setData is a recursive function that is intended to build a kube fieldpath valid
+// JSONPath of the given object, it will then copy from 'data' at the given path
+// to the passed object at t - at the same path
+func setData[T any](data interface{}, path string, t T) error {
+	switch val := data.(type) {
+	case map[string]interface{}:
+		for key, value := range val {
+			newKey := fmt.Sprintf("%s.%v", path, key)
+			if err := setData(value, newKey, t); err != nil {
+				return err
+			}
+		}
+	case []interface{}:
+		for i, value := range val {
+			newPath := fmt.Sprintf("%s[%d]", path, i)
+			if err := setData(value, newPath, t); err != nil {
+				return err
+			}
+		}
+	default:
+		// Reached a leaf node, add the JSON path to the desired resource
+		o := any(t)
+		switch o.(type) {
+		case *resource.DesiredComposed:
+			if path == ".apiVersion" {
+				o.(*resource.DesiredComposed).Resource.SetAPIVersion(data.(string))
+			} else if path == ".kind" {
+				o.(*resource.DesiredComposed).Resource.SetKind(data.(string))
+			} else {
+				path = strings.TrimPrefix(path, ".")
+				if err := o.(*resource.DesiredComposed).Resource.SetValue(path, data); err != nil {
+					return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
+				}
+			}
+		case *resource.Composite:
+			if path == ".apiVersion" {
+				o.(*resource.Composite).Resource.SetAPIVersion(data.(string))
+			} else if path == ".kind" {
+				o.(*resource.Composite).Resource.SetKind(data.(string))
+			} else {
+				path = strings.TrimPrefix(path, ".")
+				if err := o.(*resource.Composite).Resource.SetValue(path, data); err != nil {
+					return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
+				}
+			}
+		default:
+			return fmt.Errorf("cannot set data on %T: invalid type for obj", t)
+		}
 	}
 	return nil
 }
