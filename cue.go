@@ -5,9 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
-	"github.com/crossplane/function-sdk-go/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	"path/filepath"
 	"strings"
 
@@ -21,7 +18,11 @@ import (
 	"cuelang.org/go/cue/parser"
 	"cuelang.org/go/cue/token"
 
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
+	"github.com/crossplane/function-sdk-go/resource"
 	"github.com/ghodss/yaml"
+
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type cueFunction string
