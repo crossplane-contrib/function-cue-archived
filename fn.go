@@ -182,12 +182,6 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 
 // desiredMatch is used to match a list of data to apply to a desired resource
 // This is used when targeting Existing
-// type desiredMatch struct {
-// 	// list of data to add to the desired resource
-// 	data     []map[string]interface{}
-// 	resource *resource.DesiredComposed
-// }
-
 type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 
 // matchResources finds and associates the data to the desired resource
@@ -202,9 +196,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 		return nil
 	}
 
-	var (
-		matches desiredMatch
-	)
+	matches := make(desiredMatch)
 	for _, d := range data {
 		u := unstructured.Unstructured{Object: d}
 		found := find(desired, u.GetName(), u.GetKind())
@@ -294,9 +286,13 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 	case desiredMatch:
 		// Existing
 		matches := o.(desiredMatch)
-		for obj, d := range matches {
-			if err := setData(d, "", obj); err != nil {
-				return errors.Wrap(err, "cannot set data on xr")
+		// Set the Match data on the desired resource stored as keys
+		for obj, matchData := range matches {
+			// There may be multiple data patches
+			for _, d := range matchData {
+				if err := setData(d, "", obj); err != nil {
+					return errors.Wrap(err, "cannot set data on xr")
+				}
 			}
 		}
 	case *resource.Composite:

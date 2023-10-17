@@ -925,7 +925,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "updated xr \"example:Overwrite\"",
+							Message:  "updated resource \"testname:findme\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -943,7 +943,7 @@ func TestRunFunction(t *testing.T) {
 									"spec": {
 										"forProvider": {
 											"region": "ap-northeast-1",
-											"router": "somerouter",
+											"router": "somerouter"
 										}
 									}
 								}`),
