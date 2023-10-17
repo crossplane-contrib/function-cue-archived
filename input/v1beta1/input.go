@@ -5,7 +5,10 @@
 package v1beta1
 
 import (
+	"fmt"
+
 	"cuelang.org/go/cue/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +28,38 @@ func (in CUEInput) Validate() error {
 	if in.Export.Value == "" {
 		return errors.New("value cannot be empty")
 	}
+
+	allowedTarget := false
+	for _, target := range []Target{Existing, Resources, XR} {
+		if target == in.Export.Target {
+			allowedTarget = true
+			break
+		}
+	}
+	if !allowedTarget {
+		return fmt.Errorf("invalid target %s", in.Export.Target)
+	}
+
 	return nil
 }
 
+type Target string
+
+const (
+	// Existing targets existing Resources on the Observed XR
+	Existing Target = "Existing"
+	// Resources creates new resources that are added to the DesiredComposed Resources
+	Resources Target = "Resources"
+	// XR targets the existing Observed XR itself
+	XR Target = "XR"
+)
+
 // Export contains the export data
 type Export struct {
+	// Target determines what object the export output should be applied to
+	// +kubebuilder:default:=Resources
+	// +kubebuilder:validation:Enum:=Existing;Resources;XR
+	Target Target `json:"target,required"`
 	// Options for `cue export`
 	Options ExportOptions `json:"options,omitempty"`
 	// Value is the string representation of the cue value to run `cue export` against
