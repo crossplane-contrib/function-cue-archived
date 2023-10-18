@@ -2,7 +2,7 @@
 
 The `CUEInput` export `Resources` target is utilized to specify **New** resources to be created.
 
-Each document generated must have a group, version, kind and name specified.
+The documents generated must have an `apiVersion`, `kind` and `name` associated to them.
 
 ## TODO
 

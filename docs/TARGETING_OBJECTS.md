@@ -4,9 +4,9 @@
 
 - `Resources` default: create new resources
 - `PatchDesired` set fields on existing `DesiredComposed` Resources
-  - The `metadata.name` and `kind` must match
+  - The `apiVersion`, `kind` and `metadata.name` must match
 - `PatchResources` set fields on existing `CUEInput.Resources` fields.  These resources will then be added to the desired resources map
-  - The `metadata.name` and `kind` must match
+  - The `apiVersion`, `kind` and `metadata.name` must match
 - `XR` set fields on the `XR`
 
 This is controlled by fields on the `CUEInput`
