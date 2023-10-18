@@ -3,30 +3,41 @@ kind: Composition
 metadata:
   name: xnopresources.nop.example.org
 spec:
-  resources:
-  - name: StorageBucket
-    base:
-      apiVersion: s3.aws.upbound.io/v1beta1
-      kind: Bucket
-      metadata:
-        name: test-bucket
-      spec:
-        forProvider:
-          region: "us-east-2"
-  - name: VM
-    base:
-      apiVersion: ec2.aws.upbound.io/v1beta1
-      kind: Instance
-      spec:
-        forProvider:
-          ami: ami-0d9858aa3c6322f73
-          instanceType: t2.micro
-          region: "us-east-2"
   compositeTypeRef:
     apiVersion: nop.example.org/v1alpha1
     kind: XNopResource
   mode: Pipeline
   pipeline:
+  - step: prime-objects
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: prime-objects
+      export:
+        target: Resources
+        options:
+          expressions:
+          - yaml.MarshalStream(output)
+        value: |
+          output: [
+            {
+              apiVersion: "s3.aws.upbound.io/v1beta1"
+              kind: "Bucket"
+              metadata: name: "test-bucket"
+              spec: forProvider: region: "us-east-2"
+            },
+            {
+              apiVersion: "ec2.aws.upbound.io/v1beta1"
+              kind: "Instance"
+              metadata: name: "someinstance"
+              spec: forProvider: ami: "ami-0d9858aa3c6322f73"
+              spec: forProvider: instanceType: "t2.micro"
+              spec: forProvider: region: "us-east-2"
+            }
+          ]
   - step: patch-storage-bucket
     functionRef:
       name: function-cue
