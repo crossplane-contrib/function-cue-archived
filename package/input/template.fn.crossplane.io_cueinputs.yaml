@@ -110,6 +110,26 @@ spec:
                 - expressions
                 - inject
                 type: object
+              resources:
+                description: Resources is a list of resources to patch and create
+                  This is utilized when a Target is set to PatchResources
+                items:
+                  properties:
+                    base:
+                      description: Base of the composed resource that patches will
+                        be applied to. According to the patches and transforms functions,
+                        this may be ommited on occassion by a previous pipeline
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                    name:
+                      description: Name is a unique identifier for this entry in a
+                        ResourceList
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               target:
                 default: Resources
                 description: Target determines what object the export output should

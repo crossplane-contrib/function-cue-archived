@@ -13,5 +13,6 @@
 1. Add support for crossplane Environments to be _"injected_" into `cue export`
 1. Support label selectors for Patch matching
 1. `go:generate` support to generate identifiers, stored in configMaps, for `MRs` schema's from `provider-aws` `provider-gcp` and `provider-azure`
+1. ConnectionDetails propagation ?
 1. Support `cue def` ?
    1. Store output in a configmap

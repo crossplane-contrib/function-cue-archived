@@ -10,6 +10,7 @@ import (
 	"cuelang.org/go/cue/errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CUEInput can be used to provide input to this Function.
@@ -56,12 +57,15 @@ const (
 
 // Export contains the export data
 type Export struct {
+	// Options for `cue export`
+	Options ExportOptions `json:"options,omitempty"`
+	// Resources is a list of resources to patch and create
+	// This is utilized when a Target is set to PatchResources
+	Resources ResourceList `json:"resources,omitempty"`
 	// Target determines what object the export output should be applied to
 	// +kubebuilder:default:=Resources
 	// +kubebuilder:validation:Enum:=PatchDesired;Resources;XR
 	Target Target `json:"target,required"`
-	// Options for `cue export`
-	Options ExportOptions `json:"options,omitempty"`
 	// Value is the string representation of the cue value to run `cue export` against
 	Value string `json:"value,required"`
 }
@@ -110,4 +114,18 @@ type Tag struct {
 	// Path of the tag on the XR to inject from
 	// Evaluates to the Right side of '=' in `cue export --inject`
 	Path string `json:"path"`
+}
+
+type ResourceList []Resource
+
+type Resource struct {
+	// Name is a unique identifier for this entry in a ResourceList
+	Name string `json:"name"`
+	// Base of the composed resource that patches will be applied to.
+	// According to the patches and transforms functions, this may be ommited on
+	// occassion by a previous pipeline
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:EmbeddedResource
+	// +optional
+	Base *runtime.RawExtension `json:"base,omitempty"`
 }
