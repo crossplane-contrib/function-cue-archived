@@ -29,10 +29,10 @@ type fileInfo struct {
 // FromFile return detailed file info for a given build file.
 // Encoding must be specified.
 // TODO: mode should probably not be necessary here.
-func fromFile(b *build.File, mode Mode) (*fileInfo, error) {
+func fromFile(b *build.File, mode mode) (*fileInfo, error) {
 	// Handle common case. This allows certain test cases to be analyzed in
 	// isolation without interference from evaluating these files.
-	if mode == Input &&
+	if mode == inputMode &&
 		b.Encoding == build.CUE &&
 		b.Form == build.Schema &&
 		b.Interpretation == "" {

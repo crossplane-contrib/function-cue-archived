@@ -241,7 +241,7 @@ func writer(f *build.File, cfg *config) (_ io.Writer, close func() error, err er
 }
 
 type config struct {
-	Mode Mode
+	Mode mode
 
 	// Out specifies an overwrite destination.
 	Out    io.Writer
@@ -331,26 +331,26 @@ func astToFile(n ast.Node) (*ast.File, error) {
 	}
 }
 
-// Mode indicate the base mode of operation and indicates a different set of
+// mode indicate the base mode of operation and indicates a different set of
 // defaults.
-type Mode int
+type mode int
 
 const (
-	Input Mode = iota // The default
-	Export
-	Def
-	Eval
+	inputMode mode = iota // The default
+	exportMode
+	defMode
+	evalMode
 )
 
-func (m Mode) String() string {
+func (m mode) String() string {
 	switch m {
 	default:
 		return "input"
-	case Eval:
+	case evalMode:
 		return "eval"
-	case Export:
+	case exportMode:
 		return "export"
-	case Def:
+	case defMode:
 		return "def"
 	}
 }
