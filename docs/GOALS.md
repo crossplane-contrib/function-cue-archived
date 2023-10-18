@@ -6,8 +6,12 @@
 
 ### TODO
 
+1. Merging annotations and labels
 1. All of the `cue export` optional args to be implemented - see [EXPORT_OPTIONS.md](EXPORT_OPTIONS.md)
 1. Add support for loading cue files from configmap
+   1. For example, identifiers can be stored in configmaps for managed resources
 1. Add support for crossplane Environments to be _"injected_" into `cue export`
-1. `go:generate` support to generate configMaps for schemas for `MRs` in `provider-aws` `provider-gcp` and `provider-azure`
+1. Support label selectors for Patch matching
+1. `go:generate` support to generate identifiers, stored in configMaps, for `MRs` schema's from `provider-aws` `provider-gcp` and `provider-azure`
 1. Support `cue def` ?
+   1. Store output in a configmap
