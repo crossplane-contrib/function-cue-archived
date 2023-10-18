@@ -1,0 +1,51 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnopresources.nop.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: nop.example.org/v1alpha1
+    kind: XNopResource
+  mode: Pipeline
+  pipeline:
+  - step: conditional
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: multiple-objects
+      export:
+        target: Resources
+        options:
+          expressions:
+          - yaml.MarshalStream(output)
+        value: |
+          output: [
+          	{
+          		apiVersion: "nobu.dev/v1"
+          		kind:       "Cluster"
+          		metadata: name: "example-cluster"
+          	},
+          	{
+          		apiVersion: "nobu.dev/v1"
+          		kind:       "Network"
+          		metadata: name: "example-network"
+          	},
+          	{
+          		apiVersion: "nobu.dev/v1"
+          		kind:       "Memorystore"
+          		metadata: name: "example-memorystore"
+          	},
+          	{
+          		apiVersion: "nobu.dev/v1"
+          		kind:       "Firewalls"
+          		metadata: name: "example-firewalls"
+          	},
+          	{
+          		apiVersion: "nobu.dev/v1"
+          		kind:       "Nodepool"
+          		metadata: name: "example-nodepools"
+          	},
+          ]

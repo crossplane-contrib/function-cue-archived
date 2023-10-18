@@ -1,0 +1,50 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnopresources.nop.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: nop.example.org/v1alpha1
+    kind: XNopResource
+  mode: Pipeline
+  pipeline:
+  - step: conditional
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: identifier
+      export:
+        target: Resources
+        options:
+          expressions:
+          - "#identification.cluster"
+        value: |
+          #identification: [ID=_]: {
+          	apiVersion: "nobu.dev/v1"
+          	kind:       "XCluster"
+          	metadata: name: ID
+          	spec: {
+          		forProvider: {
+          			network: string
+          			masterAuthorizedNetworksConfig: {
+          				cidrBlocks: [
+          					{
+          						cidrBlock: "10.0.0.0/18"
+          						name:      "somevpc"
+          					},
+          					{
+          						cidrBlock: "1.0.0.0/32"
+          						name:      "vpn"
+          					},
+          				]
+          			}
+          		}
+          	}
+          }
+          
+          #identification: cluster: spec: forProvider: {
+          	network: "somenetwork"
+          }
