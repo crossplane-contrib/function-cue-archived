@@ -33,7 +33,7 @@ See [Targeting Objects](docs/TARGETING_OBJECTS.md) for info on updating the thre
 
 ```
 Resources (default)
-Existing
+PatchDesired
 XR
 ```
 

@@ -36,7 +36,7 @@ spec:
       metadata:
         name: patch-xr
       export:
-        target: Existing
+        target: PatchDesired
         value: |
           // Target the bucket by kind+name
           kind: "Bucket"

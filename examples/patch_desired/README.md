@@ -1,6 +1,6 @@
-# target: `Existing`
+# target: `PatchDesired`
 
-The `CUEInput` export `Existing` target is utilized to patch `DesiredComposed` resources of the `XR`
+The `CUEInput` export `PatchDesired` target is utilized to patch `DesiredComposed` resources of the `XR`
 
 The documents generated must have a kind and name associated to them.
 

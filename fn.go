@@ -134,7 +134,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		}
 		output.object = dxr
 		output.msgCount = 1
-	case v1beta1.Existing:
+	case v1beta1.PatchDesired:
 		resources, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
@@ -186,7 +186,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 }
 
 // desiredMatch matches a list of data to apply to a desired resource
-// This is used when targeting Existing resources
+// This is used when targeting PatchDesired resources
 type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 
 // matchResources finds and associates the data to the desired resource
@@ -245,7 +245,7 @@ func (output *successOutput) setSuccessMsgs() {
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
-	case v1beta1.Existing:
+	case v1beta1.PatchDesired:
 		desired := output.object.([]map[string]interface{})
 		j := 0
 		for _, d := range desired {
@@ -289,7 +289,7 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 			}
 		}
 	case desiredMatch:
-		// Existing
+		// PatchDesired
 		matches := o.(desiredMatch)
 		// Set the Match data on the desired resource stored as keys
 		for obj, matchData := range matches {

@@ -3,7 +3,7 @@
 `cue export` can target various types of objects:
 
 - `Resources` default: create new resources
-- `Existing` set fields on existing `DesiredComposed` Resources
+- `PatchDesired` set fields on existing `DesiredComposed` Resources
   - The `metadata.name` and `kind` must match
 - `XR` set fields on the `XR`
 
@@ -29,7 +29,7 @@ spec:
       metadata:
         name: basic
       export:
-        target: XR | Resources | Existing
+        target: XR | Resources | PatchDesired
         value: |
           ...
 ```

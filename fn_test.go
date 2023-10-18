@@ -881,8 +881,8 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
-		"PatchExistingDesiredComposed": {
-			reason: "Existing Resource Patching should work",
+		"PatchDesiredComposed": {
+			reason: "PatchDesired Resource should work",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
@@ -892,7 +892,7 @@ func TestRunFunction(t *testing.T) {
 							"name": "patch-existing"
 						},
 						"export": {
-							"target": "Existing",
+							"target": "PatchDesired",
 							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),
@@ -953,8 +953,8 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
-		"PatchExistingDesiredComposedTargetCorrectly": {
-			reason: "Existing Resource targeting should work",
+		"PatchDesiredComposedTargetCorrectly": {
+			reason: "PatchDesired Resource targeting should work",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
@@ -964,7 +964,7 @@ func TestRunFunction(t *testing.T) {
 							"name": "patch-existing"
 						},
 						"export": {
-							"target": "Existing",
+							"target": "PatchDesired",
 							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),

@@ -115,7 +115,7 @@ spec:
                 description: Target determines what object the export output should
                   be applied to
                 enum:
-                - Existing
+                - PatchDesired
                 - Resources
                 - XR
                 type: string
