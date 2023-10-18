@@ -66,7 +66,7 @@ func newEncoder(f *build.File, cfg *config) (*encoder, error) {
 
 	// case build.JSONSchema:
 	// 	// TODO: get encoding options
-	// 	cfg := openapi.config{}
+	// 	cfg := openapi.Config{}
 	// 	i.interpret = func(inst *cue.Instance) (*ast.File, error) {
 	// 		return jsonschmea.Generate(inst, cfg)
 	// 	}

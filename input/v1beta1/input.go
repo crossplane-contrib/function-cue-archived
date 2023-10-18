@@ -31,7 +31,7 @@ func (in CUEInput) Validate() error {
 	}
 
 	allowedTarget := false
-	for _, target := range []Target{PatchDesired, Resources, XR} {
+	for _, target := range []Target{PatchDesired, PatchResources, Resources, XR} {
 		if target == in.Export.Target {
 			allowedTarget = true
 			break
@@ -47,8 +47,11 @@ func (in CUEInput) Validate() error {
 type Target string
 
 const (
-	// PatchDesired targets existing Resources on the Observed XR
+	// PatchDesired targets existing Resources on the Desired XR
 	PatchDesired Target = "PatchDesired"
+	// PatchResources targets existing CUEInput.Export.Resources
+	// These resources are then created similar to the Resources target
+	PatchResources Target = "PatchResources"
 	// Resources creates new resources that are added to the DesiredComposed Resources
 	Resources Target = "Resources"
 	// XR targets the existing Observed XR itself
@@ -64,7 +67,7 @@ type Export struct {
 	Resources ResourceList `json:"resources,omitempty"`
 	// Target determines what object the export output should be applied to
 	// +kubebuilder:default:=Resources
-	// +kubebuilder:validation:Enum:=PatchDesired;Resources;XR
+	// +kubebuilder:validation:Enum:=PatchDesired;PatchResources;Resources;XR
 	Target Target `json:"target,required"`
 	// Value is the string representation of the cue value to run `cue export` against
 	Value string `json:"value,required"`
