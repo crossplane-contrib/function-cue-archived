@@ -86,6 +86,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot get desired composed resources from %T", req))
 		return rsp, nil
 	}
+	log.Debug(fmt.Sprintf("DesiredComposed resources: %d", len(desired)))
 
 	var (
 		outputFmt = outputJSON
@@ -137,11 +138,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = dxr
 		output.msgCount = 1
 	case v1beta1.PatchDesired:
+		log.Debug("Matching PatchDesired Resources")
 		resources, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
 			return rsp, nil
 		}
+		log.Debug(fmt.Sprintf("Matched %+v", resources))
 
 		if err := addResourcesTo(resources, "", data); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
@@ -150,6 +153,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = data
 		output.msgCount = len(data)
 	case v1beta1.PatchResources:
+		// Render the List of DesiredComposed resources from the input
+		// Update the existing desired map to be created as a base
 		for _, r := range in.Export.Resources {
 			tmp := &resource.DesiredComposed{Resource: composed.New()}
 
@@ -161,6 +166,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 			desired[resource.Name(tmp.Resource.GetName())] = tmp
 		}
 
+		// Match the data to the desired resources
 		resources, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to input resources"))
@@ -196,7 +202,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composed resources in %T", rsp))
 		return rsp, nil
 	}
-	log.Info(fmt.Sprintf("Set %d resources to the desired state", output.msgCount))
+	log.Debug(fmt.Sprintf("Set %d resource(s) to the desired state", output.msgCount))
 
 	// Output success
 	output.setSuccessMsgs()
