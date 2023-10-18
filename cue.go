@@ -51,7 +51,7 @@ const (
 )
 
 type compiler struct {
-	encoder *Encoder
+	encoder *encoder
 	data    []map[string]interface{}
 	strData []string
 	outBuf  *bytes.Buffer
@@ -110,13 +110,13 @@ func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 		return &compiler{}, fmt.Errorf("failed to parse file from %v: %s", string(outputFmt)+":-", buf.Bytes())
 	}
 	var outBuf bytes.Buffer
-	encConf := &Config{
+	encConf := &config{
 		Out:    &outBuf,
 		Stdin:  loadCfg.Stdin,
 		Mode:   Export,
 		Schema: v,
 	}
-	e, err := NewEncoder(f, encConf)
+	e, err := newEncoder(f, encConf)
 	if err != nil {
 		return &compiler{}, fmt.Errorf("failed to build encoder: %w", err)
 	}

@@ -39,15 +39,15 @@ spec:
 
 Fields are set on the XR directly, overwriting existing fields
 
-#### Existing `ObservedComposed`
-
-Fields are set on the existing resource, overwriting existing fields.  The existing resource is selected based on `observed[resource.Name]`
-
 #### Existing `DesiredComposed`
 
-Fields are set on the existing resource, overwriting existing fields.  The existing resource is selected based on `desired[resource.Name]`
+Fields are set on the existing resource, overwriting existing fields.  The existing resource is selected based on the kind+name
 
 ### overwrite:false implementation
+
+If the field to be set already exists then function-cue will error
+
+TODO
 
 This is achieved by converting the existing Composition to a cue data structure and then attempting to merge them together
 This will allow `cue export` to fail appropriately on existing fields
