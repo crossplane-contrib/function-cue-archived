@@ -1,0 +1,6 @@
+apiVersion: nopexample.org/v1
+kind: XNopResource
+metadata:
+  name: test-xrender
+spec:
+  provider: aws

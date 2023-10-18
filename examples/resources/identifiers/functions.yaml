@@ -1,0 +1,6 @@
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-cue
+spec:
+  package: mitsuwa/function-cue:v0.1.0

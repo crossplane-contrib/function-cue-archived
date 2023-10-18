@@ -66,6 +66,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		"xr-version", oxr.Resource.GetAPIVersion(),
 		"xr-kind", oxr.Resource.GetKind(),
 		"xr-name", oxr.Resource.GetName(),
+		"target", in.Export.Target,
 	)
 
 	// The composite resource desired by previous functions in the pipeline.
@@ -106,7 +107,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// Ignore the string output because it is already parsed with
 	// parseData: true
 	// The output used is produced as []map[string]interface{}
-	data, _, err := cueCompile(outputFmt, *in, compileOpts{
+	log.Info("compiling cue template from input")
+	data, out, err := cueCompile(outputFmt, *in, compileOpts{
 		parseData: true,
 		tags:      tags,
 	})
@@ -114,11 +116,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
 	}
+	log.Debug(fmt.Sprintf("CUE compile output:\n%s", out))
 
 	// Add the compiled data to the desired resources
 	// Based on the input target
 	// Store the objects into the output object
 	// For success messages later
+	log.Info("Setting output to target")
 	output := successOutput{
 		target: in.Export.Target,
 	}
@@ -164,6 +168,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composed resources in %T", rsp))
 		return rsp, nil
 	}
+	log.Info(fmt.Sprintf("Set %d resources to the desired state", output.msgCount))
 
 	// Output success
 	output.setSuccessMsgs()
@@ -180,8 +185,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	return rsp, nil
 }
 
-// desiredMatch is used to match a list of data to apply to a desired resource
-// This is used when targeting Existing
+// desiredMatch matches a list of data to apply to a desired resource
+// This is used when targeting Existing resources
 type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 
 // matchResources finds and associates the data to the desired resource
@@ -215,7 +220,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	}
 
 	if count != len(data) {
-		return nil, fmt.Errorf("failed to match all resources")
+		return matches, fmt.Errorf("failed to match all resources")
 	}
 
 	return matches, nil

@@ -1,0 +1,27 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnopresources.nop.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: nop.example.org/v1alpha1
+    kind: XNopResource
+  mode: Pipeline
+  pipeline:
+  - step: conditional
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: patch-xr
+      export:
+        target: XR
+        value: |
+          metadata: annotations: {
+              "nobu.dev/cueified": "true",
+              "nobu.dev/app": "someapp",
+          }
+          
+          spec: forProvider: network: "somenetwork"

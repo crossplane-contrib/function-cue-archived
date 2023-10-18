@@ -253,6 +253,9 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 	if err != nil {
 		return outputData, cmpStr, fmt.Errorf("failed building expression(s): %w", err)
 	}
+	if len(exprs) != len(input.Export.Options.Expressions) {
+		return outputData, cmpStr, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
+	}
 	// Run at least one time
 	for atLeastOnce || i < len(exprs) {
 		var (
