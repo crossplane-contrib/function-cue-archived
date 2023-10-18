@@ -51,7 +51,7 @@ const (
 )
 
 type compiler struct {
-	encoder *Encoder
+	encoder *encoder
 	data    []map[string]interface{}
 	strData []string
 	outBuf  *bytes.Buffer
@@ -104,19 +104,19 @@ func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, exp
 		return &compiler{}, fmt.Errorf("failed to validate: %w", err)
 	}
 
-	f, err := parseFile(string(outputFmt)+":-", Export)
+	f, err := parseFile(string(outputFmt)+":-", exportMode)
 	if err != nil {
 		var buf bytes.Buffer
 		return &compiler{}, fmt.Errorf("failed to parse file from %v: %s", string(outputFmt)+":-", buf.Bytes())
 	}
 	var outBuf bytes.Buffer
-	encConf := &Config{
+	encConf := &config{
 		Out:    &outBuf,
 		Stdin:  loadCfg.Stdin,
-		Mode:   Export,
+		Mode:   exportMode,
 		Schema: v,
 	}
-	e, err := NewEncoder(f, encConf)
+	e, err := newEncoder(f, encConf)
 	if err != nil {
 		return &compiler{}, fmt.Errorf("failed to build encoder: %w", err)
 	}
@@ -308,7 +308,7 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 // Example:
 //
 //	cue eval -o yaml:foo.data
-func parseFile(s string, mode Mode) (*build.File, error) {
+func parseFile(s string, mode mode) (*build.File, error) {
 	scope := ""
 	file := s
 
@@ -413,7 +413,7 @@ func fileExt(f string) string {
 	return e
 }
 
-func parseType(s string, mode Mode) (inst, val cue.Value, err error) {
+func parseType(s string, mode mode) (inst, val cue.Value, err error) {
 	i := cuegenValue
 	i = i.Unify(i.Lookup("modes", mode.String()))
 	v := i.LookupDef("File")

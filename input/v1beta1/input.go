@@ -1,6 +1,6 @@
 // Package v1beta1 contains the input type for this Function
 // +kubebuilder:object:generate=true
-// +groupName=template.fn.crossplane.io
+// +groupName=cue.fn.crossplane.io
 // +versionName=v1beta1
 package v1beta1
 
@@ -10,6 +10,7 @@ import (
 	"cuelang.org/go/cue/errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CUEInput can be used to provide input to this Function.
@@ -30,7 +31,7 @@ func (in CUEInput) Validate() error {
 	}
 
 	allowedTarget := false
-	for _, target := range []Target{Existing, Resources, XR} {
+	for _, target := range []Target{PatchDesired, PatchResources, Resources, XR} {
 		if target == in.Export.Target {
 			allowedTarget = true
 			break
@@ -46,8 +47,11 @@ func (in CUEInput) Validate() error {
 type Target string
 
 const (
-	// Existing targets existing Resources on the Observed XR
-	Existing Target = "Existing"
+	// PatchDesired targets existing Resources on the Desired XR
+	PatchDesired Target = "PatchDesired"
+	// PatchResources targets existing CUEInput.Export.Resources
+	// These resources are then created similar to the Resources target
+	PatchResources Target = "PatchResources"
 	// Resources creates new resources that are added to the DesiredComposed Resources
 	Resources Target = "Resources"
 	// XR targets the existing Observed XR itself
@@ -56,12 +60,15 @@ const (
 
 // Export contains the export data
 type Export struct {
-	// Target determines what object the export output should be applied to
-	// +kubebuilder:default:=Resources
-	// +kubebuilder:validation:Enum:=Existing;Resources;XR
-	Target Target `json:"target,required"`
 	// Options for `cue export`
 	Options ExportOptions `json:"options,omitempty"`
+	// Resources is a list of resources to patch and create
+	// This is utilized when a Target is set to PatchResources
+	Resources ResourceList `json:"resources,omitempty"`
+	// Target determines what object the export output should be applied to
+	// +kubebuilder:default:=Resources
+	// +kubebuilder:validation:Enum:=PatchDesired;PatchResources;Resources;XR
+	Target Target `json:"target,required"`
 	// Value is the string representation of the cue value to run `cue export` against
 	Value string `json:"value,required"`
 }
@@ -110,4 +117,18 @@ type Tag struct {
 	// Path of the tag on the XR to inject from
 	// Evaluates to the Right side of '=' in `cue export --inject`
 	Path string `json:"path"`
+}
+
+type ResourceList []Resource
+
+type Resource struct {
+	// Name is a unique identifier for this entry in a ResourceList
+	Name string `json:"name"`
+	// Base of the composed resource that patches will be applied to.
+	// According to the patches and transforms functions, this may be ommited on
+	// occassion by a previous pipeline
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:EmbeddedResource
+	// +optional
+	Base *runtime.RawExtension `json:"base,omitempty"`
 }

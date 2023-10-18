@@ -1,0 +1,84 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnopresources.nop.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: nop.example.org/v1alpha1
+    kind: XNopResource
+  mode: Pipeline
+  pipeline:
+  - step: patch-storage-bucket
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: template.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: patch-xr
+      export:
+        target: PatchResources
+        resources:
+        - name: bucket
+          base:
+            apiVersion: nobu.dev/v1
+            kind: Bucket
+            metadata:
+              name: test-bucket
+        - name: iam-user
+          base:
+            apiVersion: nobu.dev/v1
+            kind: User
+            metadata:
+              name: test-user
+        - name: iam-role
+          base:
+            apiVersion: nobu.dev/v1
+            kind: Role
+            metadata:
+              name: test-role
+        options:
+          expressions:
+          - yaml.MarshalStream(output)
+        value: |
+          output: [ 
+            {
+              // Target the bucket by kind+name
+              kind: "Bucket"
+              metadata: name: "test-bucket"
+              
+              // Add fields here
+              metadata: annotations: {
+                  "nobu.dev/cueified": "true",
+                  "nobu.dev/app": "someapp",
+              }
+              
+              spec: forProvider: policy: "some-bucket-policy"
+            }, 
+            {
+              // Target the user by kind+name
+              kind: "User"
+              metadata: name: "test-user"
+              
+              // Add fields here
+              metadata: annotations: {
+                  "nobu.dev/cueified": "true",
+                  "nobu.dev/app": "someapp",
+              }
+
+              spec: forProvider: name: "somename"
+            }, 
+            {
+              // Target the bucket by kind+name
+              kind: "Role"
+              metadata: name: "test-role"
+              
+              // Add fields here
+              metadata: annotations: {
+                  "nobu.dev/cueified": "true",
+                  "nobu.dev/app": "someapp",
+              }
+              
+              spec: forProvider: policy: "some-role-policy"
+            },
+          ]

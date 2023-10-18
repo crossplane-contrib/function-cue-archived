@@ -20,9 +20,9 @@ import (
 	"cuelang.org/go/pkg/encoding/yaml"
 )
 
-// An Encoder converts CUE to various file formats, including CUE itself.
-type Encoder struct {
-	cfg          *Config
+// An encoder converts CUE to various file formats, including CUE itself.
+type encoder struct {
+	cfg          *config
 	close        func() error
 	interpret    func(cue.Value) (*ast.File, error)
 	encFile      func(*ast.File) error
@@ -32,13 +32,13 @@ type Encoder struct {
 	instance     *cue.Instance
 }
 
-// NewEncoder writes content to the file with the given specification.
-func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
+// newEncoder writes content to the file with the given specification.
+func newEncoder(f *build.File, cfg *config) (*encoder, error) {
 	w, close, err := writer(f, cfg)
 	if err != nil {
 		return nil, err
 	}
-	e := &Encoder{
+	e := &encoder{
 		cfg:   cfg,
 		close: close,
 	}
@@ -51,7 +51,7 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 		e.interpret = func(v cue.Value) (*ast.File, error) {
 			i := e.instance
 			if i == nil {
-				i = MakeInstance(v).(*cue.Instance)
+				i = makeInstance(v).(*cue.Instance)
 			}
 			return openapi.Generate(i, cfg)
 		}
@@ -76,7 +76,7 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 
 	switch f.Encoding {
 	case build.CUE:
-		fi, err := FromFile(f, cfg.Mode)
+		fi, err := fromFile(f, cfg.Mode)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +118,7 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 
 			// Casting an ast.Expr to an ast.File ensures that it always ends
 			// with a newline.
-			f, err := ToFile(n)
+			f, err := astToFile(n)
 			if err != nil {
 				return err
 			}
@@ -212,10 +212,10 @@ func NewEncoder(f *build.File, cfg *Config) (*Encoder, error) {
 	return e, nil
 }
 
-// MakeInstance makes a new instance from a value.
-var MakeInstance func(value interface{}) (instance interface{})
+// makeInstance makes a new instance from a value.
+var makeInstance func(value interface{}) (instance interface{})
 
-func writer(f *build.File, cfg *Config) (_ io.Writer, close func() error, err error) {
+func writer(f *build.File, cfg *config) (_ io.Writer, close func() error, err error) {
 	if cfg.Out != nil {
 		return cfg.Out, nil, nil
 	}
@@ -240,8 +240,8 @@ func writer(f *build.File, cfg *Config) (_ io.Writer, close func() error, err er
 	return b, fn, nil
 }
 
-type Config struct {
-	Mode Mode
+type config struct {
+	Mode mode
 
 	// Out specifies an overwrite destination.
 	Out    io.Writer
@@ -265,7 +265,7 @@ type Config struct {
 	Expressions   []ast.Expr
 }
 
-func (e *Encoder) encodeFile(f *ast.File, interpret func(cue.Value) (*ast.File, error)) error {
+func (e *encoder) encodeFile(f *ast.File, interpret func(cue.Value) (*ast.File, error)) error {
 	if interpret == nil && e.encFile != nil {
 		return e.encFile(f)
 	}
@@ -285,7 +285,7 @@ func (e *Encoder) encodeFile(f *ast.File, interpret func(cue.Value) (*ast.File, 
 	return e.encValue(v)
 }
 
-func (e *Encoder) Encode(v cue.Value) error {
+func (e *encoder) Encode(v cue.Value) error {
 	e.autoSimplify = true
 	if err := v.Validate(cue.Concrete(e.concrete)); err != nil {
 		return err
@@ -309,13 +309,13 @@ func (e *Encoder) Encode(v cue.Value) error {
 }
 
 func valueToFile(v cue.Value) (*ast.File, error) {
-	return ToFile(v.Syntax())
+	return astToFile(v.Syntax())
 }
 
-// ToFile converts an expression to a file.
+// astToFile converts an expression to a file.
 //
 // Adjusts the spacing of x when needed.
-func ToFile(n ast.Node) (*ast.File, error) {
+func astToFile(n ast.Node) (*ast.File, error) {
 	switch x := n.(type) {
 	case nil:
 		return nil, nil
@@ -331,26 +331,26 @@ func ToFile(n ast.Node) (*ast.File, error) {
 	}
 }
 
-// Mode indicate the base mode of operation and indicates a different set of
+// mode indicate the base mode of operation and indicates a different set of
 // defaults.
-type Mode int
+type mode int
 
 const (
-	Input Mode = iota // The default
-	Export
-	Def
-	Eval
+	inputMode mode = iota // The default
+	exportMode
+	defMode
+	evalMode
 )
 
-func (m Mode) String() string {
+func (m mode) String() string {
 	switch m {
 	default:
 		return "input"
-	case Eval:
+	case evalMode:
 		return "eval"
-	case Export:
+	case exportMode:
 		return "export"
-	case Def:
+	case defMode:
 		return "def"
 	}
 }

@@ -1,7 +1,1 @@
-apiVersion: pkg.crossplane.io/v1beta1
-kind: Function
-metadata:
-  name: function-cue
-  annotations:
-    xrender.crossplane.io/runtime: Development
-    xrender.crossplane.io/runtime-development-target: localhost:9443
+../../functions.yaml

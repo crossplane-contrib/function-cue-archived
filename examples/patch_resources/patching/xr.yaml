@@ -1,0 +1,4 @@
+apiVersion: nopexample.org/v1
+kind: XResource
+metadata:
+  name: test-xrender

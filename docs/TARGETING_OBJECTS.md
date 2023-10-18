@@ -3,11 +3,13 @@
 `cue export` can target various types of objects:
 
 - `Resources` default: create new resources
-- `Existing` set fields on existing `DesiredComposed` Resources
+- `PatchDesired` set fields on existing `DesiredComposed` Resources
+  - The `metadata.name` and `kind` must match
+- `PatchResources` set fields on existing `CUEInput.Resources` fields.  These resources will then be added to the desired resources map
   - The `metadata.name` and `kind` must match
 - `XR` set fields on the `XR`
 
-This is controlled by fields on the `Input`
+This is controlled by fields on the `CUEInput`
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -29,7 +31,8 @@ spec:
       metadata:
         name: basic
       export:
-        target: XR | Resources | Existing
+        # default: Resources
+        target: PatchDesired | PatchResources | Resources | XR
         value: |
           ...
 ```

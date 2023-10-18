@@ -3,25 +3,6 @@ kind: Composition
 metadata:
   name: xnopresources.nop.example.org
 spec:
-  resources:
-  - name: StorageBucket
-    base:
-      apiVersion: s3.aws.upbound.io/v1beta1
-      kind: Bucket
-      metadata:
-        name: test-bucket
-      spec:
-        forProvider:
-          region: "us-east-2"
-  - name: VM
-    base:
-      apiVersion: ec2.aws.upbound.io/v1beta1
-      kind: Instance
-      spec:
-        forProvider:
-          ami: ami-0d9858aa3c6322f73
-          instanceType: t2.micro
-          region: "us-east-2"
   compositeTypeRef:
     apiVersion: nop.example.org/v1alpha1
     kind: XNopResource
@@ -36,7 +17,14 @@ spec:
       metadata:
         name: patch-xr
       export:
-        target: Existing
+        target: PatchResources
+        resources:
+        - name: bucket
+          base:
+            apiVersion: nobu.dev/v1
+            kind: Bucket
+            metadata:
+              name: test-bucket
         value: |
           // Target the bucket by kind+name
           kind: "Bucket"

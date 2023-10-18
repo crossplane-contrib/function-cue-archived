@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: cueinputs.template.fn.crossplane.io
+  name: cueinputs.cue.fn.crossplane.io
 spec:
-  group: template.fn.crossplane.io
+  group: cue.fn.crossplane.io
   names:
     categories:
     - crossplane
@@ -110,12 +110,32 @@ spec:
                 - expressions
                 - inject
                 type: object
+              resources:
+                description: Resources is a list of resources to patch and create
+                  This is utilized when a Target is set to PatchResources
+                items:
+                  properties:
+                    base:
+                      description: Base of the composed resource that patches will
+                        be applied to. According to the patches and transforms functions,
+                        this may be ommited on occassion by a previous pipeline
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                    name:
+                      description: Name is a unique identifier for this entry in a
+                        ResourceList
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               target:
                 default: Resources
                 description: Target determines what object the export output should
                   be applied to
                 enum:
-                - Existing
+                - PatchDesired
                 - Resources
                 - XR
                 type: string

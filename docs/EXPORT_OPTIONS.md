@@ -36,7 +36,7 @@ spec:
 
 
 Allows for injecting fields from the Observed XR into the cue template `@tag` fields.
-The tags injected are configured under the `CUEInput.export.tags` field
+The tags injected are configured under the `CUEInput.export.inject` field
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -58,11 +58,9 @@ spec:
       metadata:
         name: basic
       export:
-        tags:
-        - name: "name"
-          path: "metadata.name"
+        inject:
+        - name: "tagname"         # Name of the cue template @tag($name) to inject into
+          path: "metadata.name"   # Fieldpath of the ObservedXR to inject
         value: |
-          output: [
-            ...
-          ]
+          name: string @tag(tagname)
 ```
