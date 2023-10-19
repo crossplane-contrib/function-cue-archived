@@ -110,6 +110,11 @@ spec:
                 - expressions
                 - inject
                 type: object
+              overwrite:
+                default: false
+                description: Overwrite determines if the output should attempt to
+                  overwrite existing value
+                type: boolean
               resources:
                 description: Resources is a list of resources to patch and create
                   This is utilized when a Target is set to PatchResources
@@ -136,6 +141,7 @@ spec:
                   be applied to
                 enum:
                 - PatchDesired
+                - PatchResources
                 - Resources
                 - XR
                 type: string
