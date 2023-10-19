@@ -28,6 +28,7 @@ var testTable = []struct {
 	{outputJSON, "out: 3 * [1, 2, 3]", "{\n    \"out\": [\n        1,\n        2,\n        3,\n        1,\n        2,\n        3,\n        1,\n        2,\n        3\n    ]\n}\n", []string{}, []string{}},
 	{outputJSON, "out: 3 > 8", "{\n    \"out\": false\n}\n", []string{}, []string{}},
 	{outputJSON, "#out: \"test\"", "{}\n", []string{}, []string{}},
+	{outputJSON, "#test: \"somestring\"\n\nout: \"this-is-concatting-\\(#test)\"\n", "{\n    \"out\": \"this-is-concatting-somestring\"\n}\n", []string{}, []string{}},
 	{outputJSON, "val: number @tag(val,type=int)\n", "{\n    \"val\": 3.14\n}\n", []string{}, []string{"val=3.14"}},
 	{outputJSON, "env: string @tag(env,short=prod|staging)", "{\n    \"env\": \"prod\"\n}\n", []string{}, []string{"prod"}},
 	{outputJSON, "package main\n\nenv:  string | *\"dev\" @tag(env)\nhost: \"\\(env).domain.com\"\n", "{\n    \"env\": \"prod\",\n    \"host\": \"prod.domain.com\"\n}\n", []string{}, []string{"env=prod"}},
@@ -50,6 +51,7 @@ var testTable = []struct {
 	{outputYAML, "a: {\n\tp?: int\n}\n\n// if b is concrete, add config\nif a.b != _|_ {\n\tb: \"found\"\n}\n\n// you can also check optional fields\nif a.p != _|_ {\n\tp: a.p & >1024\n}\n\n// if c is not concrete, add config\nif a.c == _|_ {\n\tc: \"missing\"\n}\n\n// use preference marks (defaults) for that instead\na: {\n\td: _ | *\"default\"\n}\n", "c: missing\na:\n  d: default\n", []string{}, []string{}},
 	{outputYAML, "test: \"20h\"\n", "true\n", []string{"time.Duration(test)"}, []string{}},
 	{outputYAML, "package inject\n\n// @tag() is how we inject data\nenv:      *\"dev\" | string @tag(env)      // env has a default\ndatabase: string          @tag(database) // database is \"required\"\n\n// A schema for DBs with some defaults\n#DB: {\n\thost: #hosts[env]\n\tport: string | *\"5432\"\n\tdb:   database\n\n\t// interpolate the fields into the connection string\n\tconn: \"postgres://\\(host):\\(port)/\\(db)\"\n}\n\n// setup our database host mapping\n#hosts: [string]: string\n#hosts: {\n\tdev: \"postgres.dev\"\n\tstg: \"postgres.stg\"\n\tprd: \"postgres.prd\"\n}\n", "env: dev\ndatabase: foo\n", []string{}, []string{"database=foo"}},
+	{outputYAML, "old: [...{min: int, max: int}]\nold: [{'min': 3, 'max': 12}, {'min': 7, 'max': 144}]\nnew: [ for e in old {min: e.min}]\n", "- min: 3\n- min: 7\n", []string{"new"}, []string{}},
 }
 
 // TestCUECompile for str output, do not attempt to parse data in these tests
