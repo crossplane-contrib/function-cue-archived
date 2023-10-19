@@ -401,13 +401,28 @@ var (
 )
 
 // setData is a recursive function that is intended to build a kube fieldpath valid
-// JSONPath of the given object, it will then copy from 'data' at the given path
-// to the passed object at t - at the same path
+// JSONPath(s) of the given object, it will then copy from 'data' at the given path
+// to the passed o object - at the same path, overwrite defines if this function should
+// be allowed to overwrite values or not, if not return cue like conflicting value error
 func setData(data any, path string, o any, overwrite bool) error {
 	switch val := data.(type) {
 	case map[string]interface{}:
+		// Check if the parent field is annotations or labels
+		// if so wrap the key in [] instead of . prefix
+		//
+		// Check if the suffix for validation, this is because there may be metadata annotations on deeper level items
+		isWrapped := false
+		if strings.HasSuffix(path, ".metadata.annotations") || strings.HasSuffix(path, ".metadata.labels") {
+			isWrapped = true
+		}
+
 		for key, value := range val {
-			newKey := fmt.Sprintf("%s.%v", path, key)
+			var newKey string
+			if isWrapped {
+				newKey = fmt.Sprintf("%s[%s]", path, key)
+			} else {
+				newKey = fmt.Sprintf("%s.%v", path, key)
+			}
 			if err := setData(value, newKey, o, overwrite); err != nil {
 				return err
 			}

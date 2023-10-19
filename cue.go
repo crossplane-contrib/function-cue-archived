@@ -59,6 +59,10 @@ type compiler struct {
 	value   cue.Value
 }
 
+// newCompiler creates a new cue compiler based off the input/output formats, tags and expressions
+// a cue api config is created and cue Instances are built off of the input template
+// the cue instance value is wrapped with the expression if it is passed
+// validation on the cue template is also run during this step
 func newCompiler(input string, inputFmt cueInputFmt, outputFmt cueOutputFmt, expr *ast.Expr, tags []string) (*compiler, error) {
 	loadCfg := &load.Config{
 		Stdin:      strings.NewReader(input),
@@ -234,12 +238,17 @@ func (c *compiler) Parse() ([]map[string]interface{}, error) {
 	return c.data, nil
 }
 
+// compileOpts informs the compiler weather or not to parse the data into []map[string]interface
+// or to only return the output, this is really only used during cue_test.go as fn_test.go covers the parsing
+// this allows for cue_tests to output any type of data format, allowing easier test coverage of general
+// cue functionality, the supplied tags are injected into the build
 type compileOpts struct {
 	parseData bool
 	tags      []string
 }
 
-// cueCompile compiles a CUE template depending on the CUEInput configuration
+// cueCompile starting point for cue compilation
+// Compiles a CUE template depending on the CUEInput configuration
 // Passed in input and defined by the cueOutputFmt
 // Returns both an array of parsed maps of the data and string representations of the data
 func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]map[string]interface{}, string, error) {
@@ -397,6 +406,7 @@ func buildExprs(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
 	return
 }
 
+// hasEncoding determines if a cue value is concrete or has a default concrete setting
 func hasEncoding(v cue.Value) (concrete, hasDefault bool) {
 	enc := v.Lookup("encoding")
 	d, _ := enc.Default()

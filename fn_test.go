@@ -1132,6 +1132,223 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+		"PatchSingularMergeAnnotations": {
+			reason: "PatchResources annotations should merge",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing-annotations"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname",
+											"annotations": {
+												"kubernetes.io/existing": "true",
+												"kubernetes.io/serviceaccount": "somesa"
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/newone\": \"hello\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"testname:findme\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"testname": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "findme",
+									"metadata": {
+										"name": "testname",
+										"annotations": {
+											"kubernetes.io/existing": "true",
+											"kubernetes.io/newone": "hello",
+											"kubernetes.io/serviceaccount": "somesa"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		"OverwritePatchSingularMergeAnnotations": {
+			reason: "PatchResources annotations should merge",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing-annotations"
+						},
+						"export": {
+							"overwrite": true,
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname",
+											"annotations": {
+												"kubernetes.io/existing": "true",
+												"kubernetes.io/serviceaccount": "somesa"
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"testname:findme\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"testname": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "findme",
+									"metadata": {
+										"name": "testname",
+										"annotations": {
+											"kubernetes.io/existing": "true",
+											"kubernetes.io/serviceaccount": "newsa"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		"OverwritePatchSingularMergeLabels": {
+			reason: "PatchResources annotations should merge",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing-annotations"
+						},
+						"export": {
+							"overwrite": true,
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname",
+											"labels": {
+												"component": "someservices",
+												"stable": "label"
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: labels: \"additional\": \"news\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"testname:findme\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"testname": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "findme",
+									"metadata": {
+										"name": "testname",
+										"labels": {
+											"additional": "news",
+											"component": "someservices",
+											"stable": "label"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
 		"PatchResourcesTargeted": {
 			reason: "PatchResources targeting should work",
 			args: args{
@@ -1506,6 +1723,58 @@ func TestRunFunctionFailures(t *testing.T) {
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
 							Message:  "cannot match resources to input resources: failed to match all resources, found 0 / 1 patches",
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+		},
+		"FailOverwritePatchSingularMergeAnnotations": {
+			reason: "PatchResources annotations should merge",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing-annotations"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname",
+											"annotations": {
+												"kubernetes.io/existing": "true",
+												"kubernetes.io/serviceaccount": "somesa"
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot add resources to DesiredComposed: cannot set data existing desired composed object: metadata.annotations[kubernetes.io/serviceaccount]: conflicting values \"somesa\" and \"newsa\"",
 						},
 					},
 					Desired: &fnv1beta1.State{},

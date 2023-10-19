@@ -7,7 +7,7 @@ This function is based on [/play](https://cuelang.org/play) [codebase](https://g
 ## Purpose
 
 This function is intended to give a crossplane composition creator the ability to compile and run cue templates within a composition function
-The user can target the compilation output to various objects within the `DesiredResources`, `XR` or `Resources` passed into the `CUEInput`
+The user can target the compilation output to various objects determined by the target passed into the `CUEInput.Export.Target`
 
 #### Targeting Patches
 
@@ -22,7 +22,7 @@ XR
 
 ## Expected Function Input
 
-See the kubebuilder generated [CRD](package/input/template.fn.crossplane.io_cueinputs.yaml) or the [go definition](input/v1beta1/input.go)
+See the kubebuilder generated [CRD](package/input/cue.fn.crossplane.io_cueinputs.yaml) or the [go definition](input/v1beta1/input.go)
 
 #### Example Compositions
 
@@ -31,7 +31,9 @@ See [examples folder](examples)
 ## Expected Output
 
 The compilation output of the `CUEInput.Export.Value` **must** be in `YAML` or `JSON` documents, or it will fail parsing.
-Each document produced should be a valid crossplane resource `xr` or `mr`
+
+- Each document produced should be a valid crossplane resource `xr` or `mr`
+- Each document must have an `apiVersion`, `kind`, and `metadata.name`
 
 Ex `cueCompile()` output
 
@@ -103,10 +105,9 @@ spec:
 
 Logs are emitted to the Function's pod logs. Look for the Function pod in `crossplane-system`.
 
-[Crossplane]: https://crossplane.io
-[function-design]: https://github.com/crossplane/crossplane/blob/3996f20/design/design-doc-composition-functions.md
-[function-pr]: https://github.com/crossplane/crossplane/pull/4500
-[new-crossplane-issue]: https://github.com/crossplane/crossplane/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md
-[install-master-docs]: https://docs.crossplane.io/v1.13/software/install/#install-pre-release-crossplane-versions
-[proto-schema]: https://github.com/crossplane/function-sdk-go/blob/main/proto/v1beta1/run_function.proto
-[grpcurl]: https://github.com/fullstorydev/grpcurl
+#### Levels
+
+```
+Info   # default
+Debug  # run with --debug flag
+```
