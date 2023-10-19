@@ -42,6 +42,8 @@ type Function struct {
 // Add this data to either the Observed XR,
 // Specific Existing Desired XRs,
 // Or new DesiredComposed resources are created,
+//
+// TODO(nobu): refactor this
 func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequest) (*fnv1beta1.RunFunctionResponse, error) {
 	log := f.log.WithValues("tag", req.GetMeta().GetTag())
 	log.Info("Running Function")
@@ -87,6 +89,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 	log.Debug(fmt.Sprintf("DesiredComposed resources: %d", len(desired)))
+	// The composed resources desired by any previous Functions in the pipeline.
+	observed, err := request.GetObservedComposedResources(req)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrapf(err, "cannot get desired composed resources from %T", req))
+		return rsp, nil
+	}
+	log.Debug(fmt.Sprintf("ObservedComposed resources: %d", len(observed)))
 
 	var (
 		outputFmt = outputJSON
@@ -111,7 +120,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// parseData: true
 	// The output used is produced as []map[string]interface{}
 	log.Info("compiling cue template from input")
-	data, out, err := cueCompile(outputFmt, *in, compileOpts{
+	data, connectionData, out, err := cueCompile(outputFmt, *in, compileOpts{
 		parseData: true,
 		tags:      tags,
 	})
@@ -120,6 +129,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 	log.Debug(fmt.Sprintf("CUE compile output:\n%s", out))
+	fmt.Printf("Connection Data: %+v\n", connectionData)
 
 	// Add the compiled data to the desired resources
 	// Based on the input target
@@ -198,6 +208,12 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		// This is because there already may be desired objects
 		output.object = data
 		output.msgCount = len(data)
+	}
+
+	_, err = extractConnectionDetails(observed)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
+		return rsp, nil
 	}
 
 	// Set dxr and desired state

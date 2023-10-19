@@ -31,11 +31,9 @@ func (in CUEInput) Validate() error {
 	}
 
 	allowedTarget := false
-	for _, target := range []Target{PatchDesired, PatchResources, Resources, XR} {
-		if target == in.Export.Target {
-			allowedTarget = true
-			break
-		}
+	switch in.Export.Target {
+	case PatchDesired, PatchResources, Resources, XR:
+		allowedTarget = true
 	}
 	if !allowedTarget {
 		return fmt.Errorf("invalid target %s", in.Export.Target)
