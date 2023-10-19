@@ -30,23 +30,6 @@ func TestRunFunction(t *testing.T) {
 		args   args
 		want   want
 	}{
-		"NoInput": {
-			reason: "The Function should return a fatal result if no input was specified",
-			args: args{
-				req: &fnv1beta1.RunFunctionRequest{},
-			},
-			want: want{
-				rsp: &fnv1beta1.RunFunctionResponse{
-					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
-					Results: []*fnv1beta1.Result{
-						{
-							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
-							Message:  "invalid function input: value cannot be empty",
-						},
-					},
-				},
-			},
-		},
 		"BasicResourceCreation": {
 			reason: "The Function should be able to create a resource from a cue template",
 			args: args{
@@ -848,6 +831,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "XR",
+							"overwrite": true,
 							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
 						}
 					}`),
@@ -1250,6 +1234,57 @@ func TestRunFunction(t *testing.T) {
 									}
 								}`),
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			f := &Function{log: logging.NewNopLogger()}
+			rsp, err := f.RunFunction(tc.args.ctx, tc.args.req)
+
+			if diff := cmp.Diff(tc.want.rsp, rsp, protocmp.Transform()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want rsp, +got rsp:\n%s", tc.reason, diff)
+			}
+
+			if diff := cmp.Diff(tc.want.err, err, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want err, +got err:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestRunFunctionFailures(t *testing.T) {
+
+	type args struct {
+		ctx context.Context
+		req *fnv1beta1.RunFunctionRequest
+	}
+	type want struct {
+		rsp *fnv1beta1.RunFunctionResponse
+		err error
+	}
+
+	cases := map[string]struct {
+		reason string
+		args   args
+		want   want
+	}{
+		"NoInput": {
+			reason: "The Function should return a fatal result if no input was specified",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "invalid function input: value cannot be empty",
 						},
 					},
 				},

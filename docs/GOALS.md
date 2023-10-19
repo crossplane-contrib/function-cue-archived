@@ -12,6 +12,8 @@
    1. For example, identifiers can be stored in configmaps for managed resources
 1. Add support for crossplane Environments to be _"injected"_ into `cue export`
 1. Support label selectors for Patch matching
+   1. Because of the way gvk+name is used for selection, this means you cannot overwrite these fields
+      adding support for label selection or desired composed name selection will allow for this overwriting as well
 1. `go:generate` support to generate identifiers, stored in configMaps, for `MRs` schema's from `provider-aws` `provider-gcp` and `provider-azure`
 1. ConnectionDetails propagation ?
 1. Support `cue def` ?

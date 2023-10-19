@@ -24,6 +24,10 @@ XR
 
 See the kubebuilder generated [CRD](package/input/template.fn.crossplane.io_cueinputs.yaml) or the [go definition](input/v1beta1/input.go)
 
+#### Example Compositions
+
+See [examples folder](examples)
+
 ## Expected Output
 
 The compilation output of the `CUEInput.Export.Value` **must** be in `YAML` or `JSON` documents, or it will fail parsing.
@@ -94,11 +98,6 @@ metadata:
 spec:
   package: mitsuwa/function-cue:v0.1.0
 ```
-
-## Example Compositions
-
-See [examples folder](examples)
-
 
 ## Debugging
 
