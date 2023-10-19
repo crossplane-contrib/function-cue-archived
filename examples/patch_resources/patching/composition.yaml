@@ -26,7 +26,8 @@ spec:
             metadata:
               name: test-bucket
         value: |
-          // Target the bucket by kind+name
+          // Target the bucket by apiVersion+kind+name
+          apiVersion: "nobu.dev/v1"
           kind: "Bucket"
           metadata: name: "test-bucket"
           

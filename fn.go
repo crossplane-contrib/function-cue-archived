@@ -86,6 +86,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot get desired composed resources from %T", req))
 		return rsp, nil
 	}
+	log.Debug(fmt.Sprintf("DesiredComposed resources: %d", len(desired)))
 
 	var (
 		outputFmt = outputJSON
@@ -137,11 +138,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = dxr
 		output.msgCount = 1
 	case v1beta1.PatchDesired:
+		log.Debug("Matching PatchDesired Resources")
 		resources, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
 			return rsp, nil
 		}
+		log.Debug(fmt.Sprintf("Matched %+v", resources))
 
 		if err := addResourcesTo(resources, "", data); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
@@ -150,6 +153,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = data
 		output.msgCount = len(data)
 	case v1beta1.PatchResources:
+		// Render the List of DesiredComposed resources from the input
+		// Update the existing desired map to be created as a base
 		for _, r := range in.Export.Resources {
 			tmp := &resource.DesiredComposed{Resource: composed.New()}
 
@@ -161,6 +166,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 			desired[resource.Name(tmp.Resource.GetName())] = tmp
 		}
 
+		// Match the data to the desired resources
 		resources, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to input resources"))
@@ -196,7 +202,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composed resources in %T", rsp))
 		return rsp, nil
 	}
-	log.Info(fmt.Sprintf("Set %d resources to the desired state", output.msgCount))
+	log.Debug(fmt.Sprintf("Set %d resource(s) to the desired state", output.msgCount))
 
 	// Output success
 	output.setSuccessMsgs()
@@ -229,38 +235,35 @@ type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 // The length of the passed data should match the total count of desired match data
 func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []map[string]interface{}) (desiredMatch, error) {
 	// Looks through the current desired match and matches an object based on the name+kind
-	findDesired := func(desired map[resource.Name]*resource.DesiredComposed, name, kind string) *resource.DesiredComposed {
+	findDesired := func(desired map[resource.Name]*resource.DesiredComposed, apiVersion, name, kind string) *resource.DesiredComposed {
 		for _, d := range desired {
-			if d.Resource.GetName() == name && d.Resource.GetKind() == kind {
+			if d.Resource.GetName() == name && d.Resource.GetKind() == kind && d.Resource.GetAPIVersion() == apiVersion {
 				return d
 			}
 		}
 		return nil
 	}
 
-	// Iterate over all of the data patches and match them to desired resources
+	// Iterate over the data patches and match them to desired resources
 	matches := make(desiredMatch)
+	count := 0
+	// Get total count of all the match patches to apply
+	// this count should match the initial count of the supplied data
+	// otherwise we lost something somehwere
 	for _, d := range data {
 		u := unstructured.Unstructured{Object: d}
 		// PatchDesired
-		if found := findDesired(desired, u.GetName(), u.GetKind()); found != nil {
+		if found := findDesired(desired, u.GetAPIVersion(), u.GetName(), u.GetKind()); found != nil {
 			if _, ok := matches[found]; !ok {
 				matches[found] = []map[string]interface{}{d}
 			} else {
 				matches[found] = append(matches[found], d)
 			}
+			count++
 		}
 	}
-
-	// Get total count of all the match patches to apply
-	// this count should match the initial count of the supplied data
-	// otherwise we lost something somehwere
-	count := 0
-	for _, v := range matches {
-		count += len(v)
-	}
 	if count != len(data) {
-		return matches, fmt.Errorf("failed to match all resources")
+		return matches, fmt.Errorf("failed to match all resources, found %d / %d", count, len(data))
 	}
 
 	return matches, nil

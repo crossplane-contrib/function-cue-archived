@@ -49,7 +49,8 @@ spec:
       export:
         target: PatchDesired
         value: |
-          // Target the bucket by kind+name
+          // Target the bucket by apiVersion+kind+name
+          apiVersion: "s3.aws.upbound.io/v1beta1"
           kind: "Bucket"
           metadata: name: "test-bucket"
           

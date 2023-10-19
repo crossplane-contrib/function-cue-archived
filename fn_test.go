@@ -893,7 +893,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "PatchDesired",
-							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -965,7 +965,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "PatchDesired",
-							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1103,7 +1103,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1192,7 +1192,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "kind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{

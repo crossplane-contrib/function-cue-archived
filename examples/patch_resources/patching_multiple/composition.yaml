@@ -43,7 +43,8 @@ spec:
         value: |
           output: [ 
             {
-              // Target the bucket by kind+name
+              // Target the bucket by apiVersion+kind+name
+              apiVersion: "nobu.dev/v1"
               kind: "Bucket"
               metadata: name: "test-bucket"
               
@@ -56,7 +57,8 @@ spec:
               spec: forProvider: policy: "some-bucket-policy"
             }, 
             {
-              // Target the user by kind+name
+              // Target the user by apiVersion+kind+name
+              apiVersion: "nobu.dev/v1"
               kind: "User"
               metadata: name: "test-user"
               
@@ -69,7 +71,8 @@ spec:
               spec: forProvider: name: "somename"
             }, 
             {
-              // Target the bucket by kind+name
+              // Target the bucket by apiVersion+kind+name
+              apiVersion: "nobu.dev/v1"
               kind: "Role"
               metadata: name: "test-role"
               

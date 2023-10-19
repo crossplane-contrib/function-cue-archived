@@ -41,11 +41,11 @@ Fields are set on the XR directly, overwriting existing fields
 
 #### `PatchResources` DesiredComposed
 
-Fields are set on the existing `CUEInput.Resources`, overwriting existing fields.  The existing resource is selected based on the kind+name
+Fields are set on the existing `CUEInput.Resources`, overwriting existing fields.  The existing resource is selected based on the apiVersion+kind+name
 
 #### `PatchDesired` DesiredComposed
 
-Fields are set on the existing resource, overwriting existing fields.  The existing resource is selected based on the kind+name
+Fields are set on the existing resource, overwriting existing fields.  The existing resource is selected based on the apiVersion+kind+name
 
 ### overwrite:false implementation
 
