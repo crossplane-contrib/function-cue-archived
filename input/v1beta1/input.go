@@ -62,6 +62,9 @@ const (
 type Export struct {
 	// Options for `cue export`
 	Options ExportOptions `json:"options,omitempty"`
+	// Overwrite determines if the output should attempt to overwrite existing value
+	// +kubebuilder:default:=false
+	Overwrite bool `json:"overwrite,omitempty"`
 	// Resources is a list of resources to patch and create
 	// This is utilized when a Target is set to PatchResources
 	Resources ResourceList `json:"resources,omitempty"`

@@ -1,5 +1,5 @@
 # Environments
 
-TODO
+### TODO
 
-Similar to [configMaps](CONFIGMAPS.md), environments can be transposed into `CUE` files and added to the build
+Similar to [configMaps](CONFIGMAPS.md), environments should be abl to be transposed into `CUE` files and added to the build

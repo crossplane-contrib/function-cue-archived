@@ -4,10 +4,13 @@
 
 - `Resources` default: create new resources
 - `PatchDesired` set fields on existing `DesiredComposed` Resources
-  - The `apiVersion`, `kind` and `metadata.name` must match
+  - The produced document's `apiVersion`, `kind` and `metadata.name` must match, because of this
+    these fields cannot be overwritten, until label selectors are supported
 - `PatchResources` set fields on existing `CUEInput.Resources` fields.  These resources will then be added to the desired resources map
-  - The `apiVersion`, `kind` and `metadata.name` must match
+  - The produced document's  `apiVersion`, `kind` and `metadata.name` must match, because of this
+    these fields cannot be overwritten, until label selectors are supported
 - `XR` set fields on the `XR`
+  - Allows for overwriting `apiVersion`, `kind` and `metadata.name`
 
 This is controlled by fields on the `CUEInput`
 

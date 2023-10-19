@@ -129,9 +129,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	output := successOutput{
 		target: in.Export.Target,
 	}
+	conf := addResourcesConf{
+		overwrite: in.Export.Overwrite,
+	}
 	switch output.target {
 	case v1beta1.XR:
-		if err := addResourcesTo(dxr, "", data); err != nil {
+		conf.data = data
+		if err := addResourcesTo(dxr, conf); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to XR"))
 			return rsp, nil
 		}
@@ -139,14 +143,14 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.msgCount = 1
 	case v1beta1.PatchDesired:
 		log.Debug("Matching PatchDesired Resources")
-		resources, err := matchResources(desired, data)
+		desiredMatches, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
 			return rsp, nil
 		}
-		log.Debug(fmt.Sprintf("Matched %+v", resources))
+		log.Debug(fmt.Sprintf("Matched %+v", desiredMatches))
 
-		if err := addResourcesTo(resources, "", data); err != nil {
+		if err := addResourcesTo(desiredMatches, conf); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
 			return rsp, nil
 		}
@@ -167,14 +171,16 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		}
 
 		// Match the data to the desired resources
-		resources, err := matchResources(desired, data)
+		desiredMatches, err := matchResources(desired, data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to input resources"))
 			return rsp, nil
 		}
 
-		for dr, d := range resources {
-			if err := addResourcesTo(desired, dr.Resource.GetName(), d); err != nil {
+		for dr, d := range desiredMatches {
+			conf.basename = dr.Resource.GetName()
+			data = d
+			if err := addResourcesTo(desiredMatches, conf); err != nil {
 				response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
 				return rsp, nil
 			}
@@ -182,7 +188,9 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.object = data
 		output.msgCount = len(data)
 	case v1beta1.Resources:
-		if err := addResourcesTo(desired, in.Name, data); err != nil {
+		conf.basename = in.Name
+		conf.data = data
+		if err := addResourcesTo(desired, conf); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
 			return rsp, nil
 		}
@@ -249,7 +257,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	count := 0
 	// Get total count of all the match patches to apply
 	// this count should match the initial count of the supplied data
-	// otherwise we lost something somehwere
+	// otherwise we lost something somewhere
 	for _, d := range data {
 		u := unstructured.Unstructured{Object: d}
 		// PatchDesired
@@ -263,7 +271,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 		}
 	}
 	if count != len(data) {
-		return matches, fmt.Errorf("failed to match all resources, found %d / %d", count, len(data))
+		return matches, fmt.Errorf("failed to match all resources, found %d / %d patches", count, len(data))
 	}
 
 	return matches, nil
@@ -311,12 +319,18 @@ func (output *successOutput) setSuccessMsgs() {
 	sort.Strings(output.msgs)
 }
 
+type addResourcesConf struct {
+	basename  string
+	data      []map[string]interface{}
+	overwrite bool
+}
+
 // addResourcesTo adds the given data to any allowed object passed
 // Will return err if the object is not of a supported type
 // For 'desired' composed resources, the basename is used for the resource name
 // For 'xr' resources, the basename must match the xr name
 // For 'existing' resources, the basename must match the resource name
-func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}) error {
+func addResourcesTo(o any, conf addResourcesConf) error {
 	// Merges data with the desired composed resource
 	// Values from data overwrite the desired composed resource
 	merged := func(data map[string]interface{}, from *resource.DesiredComposed) map[string]interface{} {
@@ -331,21 +345,20 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 		return merged
 	}
 
-	o := any(obj)
 	switch o.(type) {
 	case map[resource.Name]*resource.DesiredComposed:
 		// Resources
 		desired := o.(map[resource.Name]*resource.DesiredComposed)
-		name := resource.Name(basename)
-		for _, d := range data {
+		name := resource.Name(conf.basename)
+		for _, d := range conf.data {
 			u := unstructured.Unstructured{
 				Object: d,
 			}
 
 			// If there are multiple resources to add
 			// Add the resource name as a suffix to the basename
-			if len(data) > 1 {
-				name = resource.Name(fmt.Sprintf("%s-%s", basename, u.GetName()))
+			if len(conf.data) > 1 {
+				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, u.GetName()))
 			}
 			// If the value exists, merge its existing value with the patches
 			if v, ok := desired[name]; ok {
@@ -363,74 +376,89 @@ func addResourcesTo[T any](obj T, basename string, data []map[string]interface{}
 		matches := o.(desiredMatch)
 		// Set the Match data on the desired resource stored as keys
 		for obj, matchData := range matches {
-			// There may be multiple data patches
+			// There may be multiple data patches to the DesiredComposed object
 			for _, d := range matchData {
-				if err := setData(d, "", obj); err != nil {
-					return errors.Wrap(err, "cannot set data on xr")
+				if err := setData(d, "", obj, conf.overwrite); err != nil {
+					return errors.Wrap(err, "cannot set data existing desired composed object")
 				}
 			}
 		}
 	case *resource.Composite:
 		// XR
-		for _, d := range data {
-			if err := setData(d, "", o); err != nil {
+		for _, d := range conf.data {
+			if err := setData(d, "", o, conf.overwrite); err != nil {
 				return errors.Wrap(err, "cannot set data on xr")
 			}
 		}
 	default:
-		return fmt.Errorf("cannot add configuration to %T: invalid type for obj", obj)
+		return fmt.Errorf("cannot add configuration to %T: invalid type for obj", o)
 	}
 	return nil
 }
 
+var (
+	errNoSuchField = "no such field"
+)
+
 // setData is a recursive function that is intended to build a kube fieldpath valid
 // JSONPath of the given object, it will then copy from 'data' at the given path
 // to the passed object at t - at the same path
-func setData[T any](data interface{}, path string, t T) error {
+func setData(data any, path string, o any, overwrite bool) error {
 	switch val := data.(type) {
 	case map[string]interface{}:
 		for key, value := range val {
 			newKey := fmt.Sprintf("%s.%v", path, key)
-			if err := setData(value, newKey, t); err != nil {
+			if err := setData(value, newKey, o, overwrite); err != nil {
 				return err
 			}
 		}
 	case []interface{}:
 		for i, value := range val {
 			newPath := fmt.Sprintf("%s[%d]", path, i)
-			if err := setData(value, newPath, t); err != nil {
+			if err := setData(value, newPath, o, overwrite); err != nil {
 				return err
 			}
 		}
 	default:
 		// Reached a leaf node, add the JSON path to the desired resource
-		o := any(t)
 		switch o.(type) {
 		case *resource.DesiredComposed:
-			obj := o.(*resource.DesiredComposed).Resource
-			if path == ".apiVersion" {
-				obj.SetAPIVersion(data.(string))
-			} else if path == ".kind" {
-				obj.SetKind(data.(string))
-			} else {
-				path = strings.TrimPrefix(path, ".")
-				if err := obj.SetValue(path, data); err != nil {
-					return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
-				}
+			path = strings.TrimPrefix(path, ".")
+
+			// Because we match on gvk+name, there is no need to set this
+			// ignore setting these again because this will conflict with the overwrite settings
+			if path == "apiVersion" || path == "kind" || path == "metadata.name" {
+				return nil
+			}
+
+			r := o.(*resource.DesiredComposed).Resource
+			if curVal, err := r.GetValue(path); err != nil && !strings.Contains(err.Error(), errNoSuchField) {
+				return errors.Wrapf(err, "getting %s:%s in xr failed", path, data)
+			} else if curVal != nil && !overwrite {
+				return fmt.Errorf("%s: conflicting values %q and %q", path, curVal, data)
+			}
+
+			if err := r.SetValue(path, data); err != nil {
+				return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
 			}
 		case *resource.Composite:
-			if path == ".apiVersion" {
-				o.(*resource.Composite).Resource.SetAPIVersion(data.(string))
-			} else if path == ".kind" {
-				o.(*resource.Composite).Resource.SetKind(data.(string))
-			} else {
-				path = strings.TrimPrefix(path, ".")
-				if err := o.(*resource.Composite).Resource.SetValue(path, data); err != nil {
-					return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
-				}
+			path = strings.TrimPrefix(path, ".")
+
+			// The composite does not do any matching to update so there is no need to skip here
+			// on apiVersion, kind or metadata.name
+
+			r := o.(*resource.Composite).Resource
+			if curVal, err := r.GetValue(path); err != nil && !strings.Contains(err.Error(), errNoSuchField) {
+				return errors.Wrapf(err, "getting %s:%s in xr failed", path, data)
+			} else if curVal != nil && !overwrite {
+				return fmt.Errorf("%s: conflicting values %q and %q", path, curVal, data)
+			}
+
+			if err := r.SetValue(path, data); err != nil {
+				return errors.Wrapf(err, "setting %s:%s in dxr failed", path, data)
 			}
 		default:
-			return fmt.Errorf("cannot set data on %T: invalid type for obj", t)
+			return fmt.Errorf("cannot set data on %T: invalid type for obj", o)
 		}
 	}
 	return nil

@@ -10,5 +10,4 @@ If the patch count does not match the number of generated documents (not found d
 
 ### TODO
 
-- add apiVersion targeting as well
 - Merging annotations and labels

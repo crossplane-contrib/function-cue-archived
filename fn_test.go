@@ -30,23 +30,6 @@ func TestRunFunction(t *testing.T) {
 		args   args
 		want   want
 	}{
-		"NoInput": {
-			reason: "The Function should return a fatal result if no input was specified",
-			args: args{
-				req: &fnv1beta1.RunFunctionRequest{},
-			},
-			want: want{
-				rsp: &fnv1beta1.RunFunctionResponse{
-					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
-					Results: []*fnv1beta1.Result{
-						{
-							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
-							Message:  "invalid function input: value cannot be empty",
-						},
-					},
-				},
-			},
-		},
 		"BasicResourceCreation": {
 			reason: "The Function should be able to create a resource from a cue template",
 			args: args{
@@ -848,6 +831,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "XR",
+							"overwrite": true,
 							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
 						}
 					}`),
@@ -1252,6 +1236,279 @@ func TestRunFunction(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			f := &Function{log: logging.NewNopLogger()}
+			rsp, err := f.RunFunction(tc.args.ctx, tc.args.req)
+
+			if diff := cmp.Diff(tc.want.rsp, rsp, protocmp.Transform()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want rsp, +got rsp:\n%s", tc.reason, diff)
+			}
+
+			if diff := cmp.Diff(tc.want.err, err, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want err, +got err:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestRunFunctionFailures(t *testing.T) {
+
+	type args struct {
+		ctx context.Context
+		req *fnv1beta1.RunFunctionRequest
+	}
+	type want struct {
+		rsp *fnv1beta1.RunFunctionResponse
+		err error
+	}
+
+	cases := map[string]struct {
+		reason string
+		args   args
+		want   want
+	}{
+		"NoInput": {
+			reason: "The Function should return a fatal result if no input was specified",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "invalid function input: value cannot be empty",
+						},
+					},
+				},
+			},
+		},
+		"ConflictingValuesPatchResources": {
+			reason: "Conflicting Values without overwrite, PatchResources should fail",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname"
+										},
+										"spec": {
+											"conflicting": "existingval"
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: conflicting: \"setattempt\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot add resources to DesiredComposed: cannot set data existing desired composed object: spec.conflicting: conflicting values \"existingval\" and \"setattempt\"",
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+		},
+		"ConflictingPatchXRKind": {
+			reason: "XR Targetting should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "xr-overwrite"
+						},
+						"export": {
+							"target": "XR",
+							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot add resources to XR: cannot set data on xr: kind: conflicting values \"XR\" and \"Overwrite\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{},
+					},
+				},
+			},
+		},
+		"FailMatchingTargets": {
+			reason: "PatchResources targeting should fail if gvk+name do not match",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "incorrectname"
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot match resources to input resources: failed to match all resources, found 0 / 1 patches",
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+		},
+		"FailMatchingMultipleTargets": {
+			reason: "PatchResources targeting should fail if gvk+name do not match",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "incorrectname"
+										}
+									}
+								},
+								{
+									"name": "example-cluster2",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "incorrectkind",
+										"metadata": {
+											"name": "testname"
+										}
+									}
+								},
+								{
+									"name": "example-cluster3",
+									"base": {
+										"apiVersion": "fail.example.org/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname"
+										}
+									}
+								},
+								{
+									"name": "example-cluster4",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "incorrectkind",
+										"metadata": {
+											"name": "incorrectname"
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot match resources to input resources: failed to match all resources, found 0 / 1 patches",
+						},
+					},
+					Desired: &fnv1beta1.State{},
 				},
 			},
 		},
