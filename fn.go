@@ -401,8 +401,9 @@ var (
 )
 
 // setData is a recursive function that is intended to build a kube fieldpath valid
-// JSONPath of the given object, it will then copy from 'data' at the given path
-// to the passed object at t - at the same path
+// JSONPath(s) of the given object, it will then copy from 'data' at the given path
+// to the passed o object - at the same path, overwrite defines if this function should
+// be allowed to overwrite values or not, if not return cue like conflicting value error
 func setData(data any, path string, o any, overwrite bool) error {
 	switch val := data.(type) {
 	case map[string]interface{}:
