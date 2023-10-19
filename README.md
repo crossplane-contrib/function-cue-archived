@@ -6,7 +6,7 @@ This function is based on [/play](https://cuelang.org/play) [codebase](https://g
 
 ## Purpose
 
-This function is intended to give a crossplane composition creator the ability to compile and run cue templates within a composition function
+This function is intended to give a crossplane composition creator the ability to compile and run cue templates within a composition function.
 The user can target the compilation output to various objects determined by the target passed into the `CUEInput.Export.Target`
 
 #### Targeting Patches
