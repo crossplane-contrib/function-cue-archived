@@ -12,16 +12,12 @@ The connection details must be defined in the cue template `#connectionDetails`
 #connectionDetailType: "FromConnectionSecretKey" | "FromFieldPath" | "FromValue"
 
 #match: {
-	// apiVersion of the object
 	apiVersion: string
-	// kind of the object
-	kind: string
-	// metadata.name of the object
-	name: string
+	kind:       string
+	name:       string
 }
 
 #connectionDetail: {
-	// Specifies which document to associate this connection detail with
 	Match: #match
 
 	// Name of the connection secret key that will be propagated to the
@@ -35,20 +31,17 @@ The connection details must be defined in the cue template `#connectionDetails`
 
 	// FromConnectionSecretKey is the key that will be used to fetch the value
 	// from the composed resource's connection secret.
-	// +optional
-	FromConnectionSecretKey: string
+	FromConnectionSecretKey?: string
 
 	// FromFieldPath is the path of the field on the composed resource whose
 	// value to be used as input. Name must be specified if the type is
 	// FromFieldPath.
-	// +optional
-	FromFieldPath: string
+	FromFieldPath?: string
 
 	// Value that will be propagated to the connection secret of the composite
 	// resource. May be set to inject a fixed, non-sensitive connection secret
 	// value, for example a well-known port.
-	// +optional
-	Value: string
+	Value?: string
 }
 
 #connectionDetails: [...#connectionDetail] & [

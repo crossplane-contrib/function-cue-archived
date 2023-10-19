@@ -373,8 +373,8 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 				Object: d,
 			}
 
-			// If there are multiple resources to add
 			// Add the resource name as a suffix to the basename
+			// if there are multiple resources to add
 			if len(conf.data) > 1 {
 				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, u.GetName()))
 			}

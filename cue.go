@@ -247,20 +247,20 @@ type compileOpts struct {
 	tags      []string
 }
 
-var (
-	errConnectionDetailsNotFound = fmt.Errorf("failed to validate: reference %q not found", conDetailsExpr)
-)
-
 const (
 	// conDetailsExpr is the string representation of connection details to be passed
 	// From the user to function-cue
-	conDetailsExpr = "#connectionDetails"
+	conDetailsExpr = "json.MarshalStream(#connectionDetails)"
+)
+
+var (
+	errConnectionDetailsNotFound = fmt.Errorf("failed to validate: reference \"#connectionDetails\" not found")
 )
 
 type compileOutput struct {
 	// Data is the parsed output data, excluding configuration expressions
 	data           []map[string]interface{}
-	connectionData []map[string]interface{}
+	connectionData []connectionDetail
 	string         string
 }
 
@@ -295,14 +295,18 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 	// Output is appended to outputData
 	// Compile string output is added to cmpStr
 	// connection details is output to connectionData
-	for _, expr := range exprs {
+	for i, expr := range exprs {
 		var (
 			err        error
 			c          *compiler
 			conDetails bool
 		)
-		if expr != nil && fmt.Sprintf("%+v", expr) == conDetailsExpr {
+		// Refactor this to not be based on a count
+		// The last expression is always the injected #connectionDetails
+		if i == len(exprs)-1 {
 			conDetails = true
+			// streams need to be outputTXT
+			out = outputTXT
 		}
 
 		c, err = newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
@@ -328,7 +332,16 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 			// The last expression is always the injected #connectionDetails
 			// This happens in buildExprs
 			if conDetails {
-				output.connectionData = append(output.connectionData, data...)
+				// this is a little silly to have to convert this back to a string
+				// maybe there's a better way to do this
+				tmp, err := json.Marshal(data)
+				if err != nil {
+					return output, fmt.Errorf("failed marshalling connection details: %w", err)
+				}
+				if err := json.Unmarshal(tmp, &output.connectionData); err != nil {
+					return output, fmt.Errorf("failed unmarshalling connection details: %w", err)
+				}
+				// output.connectionData = append(output.connectionData, data...)
 			} else {
 				output.data = append(output.data, data...)
 			}
