@@ -47,7 +47,7 @@ Fields are set on the existing resource, overwriting existing fields.  The exist
 
 ### overwrite:false implementation
 
-If the field to be set already exists then function-cue will error
+If the field to be set already exists then function-cue will error on `XR` `PatchResource` and `PatchDesired`
 
 TODO
 

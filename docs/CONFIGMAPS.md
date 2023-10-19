@@ -1,8 +1,8 @@
 # ConfigMaps
 
-TODO
+### TODO
 
-Configmaps can be used to store additional `CUE` files.
+Configmaps should be able to be used to store additional `CUE` files.
 These files can be referenced in the `CUEInput` template using the `configMaps`
 field and be added to the build
 

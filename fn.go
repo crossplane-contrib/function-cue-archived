@@ -271,7 +271,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 		}
 	}
 	if count != len(data) {
-		return matches, fmt.Errorf("failed to match all resources, found %d / %d", count, len(data))
+		return matches, fmt.Errorf("failed to match all resources, found %d / %d patches", count, len(data))
 	}
 
 	return matches, nil
