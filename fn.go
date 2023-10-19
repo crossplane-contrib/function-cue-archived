@@ -249,7 +249,7 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	count := 0
 	// Get total count of all the match patches to apply
 	// this count should match the initial count of the supplied data
-	// otherwise we lost something somehwere
+	// otherwise we lost something somewhere
 	for _, d := range data {
 		u := unstructured.Unstructured{Object: d}
 		// PatchDesired
