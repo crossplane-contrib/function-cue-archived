@@ -11,7 +11,19 @@ The connection details must be defined in the cue template `#connectionDetails`
 // Following the Schema
 #connectionDetailType: "FromConnectionSecretKey" | "FromFieldPath" | "FromValue"
 
+#match: {
+	// apiVersion of the object
+	apiVersion: string
+	// kind of the object
+	kind: string
+	// metadata.name of the object
+	name: string
+}
+
 #connectionDetail: {
+	// Specifies which document to associate this connection detail with
+	Match: #match
+
 	// Name of the connection secret key that will be propagated to the
 	// connection secret of the composed resource.
 	Name: string
@@ -46,3 +58,8 @@ The connection details must be defined in the cue template `#connectionDetails`
 
 This data will be evaluated by function-cue and the values will be propagated to the xr.
 If there are no details found, then the xr will not receive any propagation
+
+#### TODO
+
+allow for individual `#connectionDetail` to be specified within each document. This
+would allow the match association to not need to be specified twice

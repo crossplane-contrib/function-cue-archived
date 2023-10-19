@@ -257,6 +257,13 @@ const (
 	conDetailsExpr = "#connectionDetails"
 )
 
+type compileOutput struct {
+	// Data is the parsed output data, excluding configuration expressions
+	data           []map[string]interface{}
+	connectionData []map[string]interface{}
+	string         string
+}
+
 // cueCompile starting point for cue compilation
 // Compiles a CUE template depending on the CUEInput configuration
 // Passed in input and defined by the cueOutputFmt
@@ -265,20 +272,18 @@ const (
 // #connectionDetails is injected into the expressionList in order to allow the user to provider
 // connectionDetails per document
 // This will probably need to be refactored if more information is passed to the compiler this way
-func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]map[string]interface{}, []map[string]interface{}, string, error) {
+func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (compileOutput, error) {
 	var (
-		cmpStr         string
-		outputData     []map[string]interface{}
-		connectionData []map[string]interface{}
+		output compileOutput
 	)
 	// Build list of expressions from input
 	exprs, err := buildExprs(input)
 	if err != nil {
-		return outputData, connectionData, cmpStr, fmt.Errorf("failed building expression(s): %w", err)
+		return output, fmt.Errorf("failed building expression(s): %w", err)
 	}
 	// #connectionDetails expression is always injected into the end of the expression list
 	if len(exprs) != len(input.Export.Options.Expressions)+1 {
-		return outputData, connectionData, cmpStr, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
+		return output, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
 	}
 	// if the only expression in the list is #connectionDetails
 	if len(exprs) == 1 {
@@ -307,43 +312,42 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]m
 			// If there are no connection details then an empty list is returned
 			break
 		} else if err != nil {
-			return outputData, connectionData, cmpStr, fmt.Errorf("failed creating cue compiler: %w", err)
+			return output, fmt.Errorf("failed creating cue compiler: %w", err)
 		}
 		if err = c.Compile(); err != nil {
-			return outputData, connectionData, cmpStr, fmt.Errorf("failed compiling cue template: %w", err)
+			return output, fmt.Errorf("failed compiling cue template: %w", err)
 		}
 
 		// only attempt to parse data if specified
 		if opts.parseData == true {
 			data, err := c.Parse()
 			if err != nil {
-				return outputData, connectionData, cmpStr, fmt.Errorf("failed parsing cue output: %w", err)
+				return output, fmt.Errorf("failed parsing cue output: %w", err)
 			}
 
 			// The last expression is always the injected #connectionDetails
 			// This happens in buildExprs
 			if conDetails {
-				connectionData = append(connectionData, data...)
+				output.connectionData = append(output.connectionData, data...)
 			} else {
-				outputData = append(outputData, data...)
+				output.data = append(output.data, data...)
 			}
 		}
 
 		// If there are multiple yaml documents, then separate them by ---
 		if out == outputTXT || out == outputYAML {
-			if cmpStr == "" {
-				cmpStr += c.String()
+			if output.string == "" {
+				output.string += c.String()
 			} else {
-				cmpStr += fmt.Sprintf("---\n%s", c.String())
+				output.string += fmt.Sprintf("---\n%s", c.String())
 			}
 		} else if out == outputJSON || out == outputCUE {
 			// Multiple json documents do not need to be separated
-			cmpStr += c.String()
+			output.string += c.String()
 		}
-		// atLeastOnce = false
 	}
 
-	return outputData, connectionData, cmpStr, nil
+	return output, nil
 }
 
 // ParseFile parses a single-argument file specifier, such as when a file is

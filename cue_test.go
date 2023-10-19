@@ -67,12 +67,12 @@ func TestCUECompile(t *testing.T) {
 				Value: tv.InVal,
 			},
 		}
-		_, _, out, err := cueCompile(tv.Out, in, compileOpts{
+		out, err := cueCompile(tv.Out, in, compileOpts{
 			parseData: false,
 			tags:      tv.Injects,
 		})
 		assert.Nil(t, err, "%s: received unexpected error", desc)
-		assert.Equal(t, tv.OutVal, out, "%s: expected output %q: got %q", desc, tv.OutVal, out)
+		assert.Equal(t, tv.OutVal, out.string, "%s: expected output %q: got %q", desc, tv.OutVal, out)
 	}
 }
 
@@ -111,8 +111,8 @@ func TestCUECompileFailures(t *testing.T) {
 				Value: tv.InVal,
 			},
 		}
-		_, _, out, err := cueCompile(tv.Out, in, compileOpts{parseData: false})
-		assert.NotNil(t, err, "%s: expected error, but did not receive one, output was %s", desc, out)
+		out, err := cueCompile(tv.Out, in, compileOpts{parseData: false})
+		assert.NotNil(t, err, "%s: expected error, but did not receive one, output was %s", desc, out.string)
 		assert.Equal(t, tv.Err, err.Error(), "%s: expected error %q: got %q", desc, tv.Err, err.Error())
 	}
 }
