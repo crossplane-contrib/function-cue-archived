@@ -2,6 +2,8 @@
 
 `-e, --expression`
 
+`stringArray : export this expression only`
+
 Configured under the `CUEInput.export.expression` field
 
 ```yaml
@@ -34,6 +36,8 @@ spec:
 
 `-t, --inject`
 
+`stringArray : set the value of a tagged field`
+
 
 Allows for injecting fields from the Observed XR into the cue template `@tag` fields.
 The tags injected are configured under the `CUEInput.export.inject` field
@@ -64,3 +68,9 @@ spec:
         value: |
           name: string @tag(tagname)
 ```
+
+`--out`
+
+`string : output format (run 'cue filetypes' for more info)`
+
+Used for testing. Controlled by `cueOutputFmt` types
