@@ -212,18 +212,27 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.msgCount = len(cmpOut.data)
 	}
 
-	_, err = extractConnectionDetails(observed, cmpOut.connectionData)
+	// Get the connection details and propogate them to the xr
+	conn, err := extractConnectionDetails(observed, cmpOut.connectionData)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
 		return rsp, nil
 	}
+	log.Debug(fmt.Sprintf("Setting %d connectionDetails", len(conn)))
+	for k, v := range conn {
+		dxr.ConnectionDetails[k] = v
+	}
 
 	// Set dxr and desired state
+	log.Debug("Setting desired XR state to %+v", dxr.Resource)
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composite resource in %T", rsp))
 		return rsp, nil
 	}
 
+	for _, d := range desired {
+		log.Debug(fmt.Sprintf("Setting DesiredComposed state to %+v", d.Resource))
+	}
 	if err := response.SetDesiredComposedResources(rsp, desired); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composed resources in %T", rsp))
 		return rsp, nil

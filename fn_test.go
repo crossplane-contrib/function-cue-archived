@@ -1496,6 +1496,9 @@ func TestRunFunction(t *testing.T) {
 										"name": "testname"
 									}
 								}`),
+								ConnectionDetails: map[string][]byte{
+									"thisisthekey": []byte("secretvalue"),
+								},
 							},
 						},
 					},
@@ -1514,6 +1517,9 @@ func TestRunFunction(t *testing.T) {
 					Desired: &fnv1beta1.State{
 						Composite: &fnv1beta1.Resource{
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+							ConnectionDetails: map[string][]byte{
+								"testname": []byte("secretvalue"),
+							},
 						},
 						Resources: map[string]*fnv1beta1.Resource{
 							"testname": {

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	"github.com/crossplane/function-sdk-go/resource"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -29,7 +30,8 @@ type match struct {
 // information from one secret to another.
 type connectionDetail struct {
 	// Match is used to associate the connection detail to an object
-	Match match `json:"match,required"`
+	// Match is required for FromConnectionSecretKey and FromFieldPath
+	Match match `json:"match,omitempty"`
 	// Name of the connection secret key that will be propagated to the
 	// connection secret of the composed resource.
 	Name string `json:"name,required"`
@@ -50,7 +52,8 @@ type connectionDetail struct {
 	Value *string `json:"value,omitempty"`
 }
 
-// extractConnectionDetails extracts XR connection details from the supplied
+// extractConnectionDetails extracts XR connection details from the supplied observed map
+// matches against connectionDetails.Match
 func extractConnectionDetails(observed map[resource.Name]resource.ObservedComposed, conDetails []connectionDetail) (managed.ConnectionDetails, error) {
 	out := map[string][]byte{}
 
@@ -59,29 +62,61 @@ func extractConnectionDetails(observed map[resource.Name]resource.ObservedCompos
 			return nil, err
 		}
 
-		switch detail.Type {
-		case connectionDetailTypeFromValue:
-			// out[detail.Name] = []byte(*detail.Value)
-		case connectionDetailTypeFromConnectionSecretKey:
-			// if data[*detail.FromConnectionSecretKey] == nil {
-			// We don't consider this an error because it's possible the
-			// key will still be written at some point in the future.
-			// continue
-			// }
-			// out[detail.Name] = data[*detail.FromConnectionSecretKey]
-		case connectionDetailTypeFromFieldPath:
-			// Note we're checking that the error _is_ nil. If we hit an error
-			// we silently avoid including this connection secret. It's possible
-			// the path will start existing with a valid value in future.
-			// if b, err := fromFieldPath(cd, *cfg.FromFieldPath); err == nil {
-			// out[detail.Name] = b
-			// }
+		// Setting from value does not require a match
+		if detail.Type == connectionDetailTypeFromValue {
+			out[detail.Name] = []byte(*detail.Value)
+			continue
+		}
+
+		for _, ocd := range observed {
+			if detail.Match.Name == ocd.Resource.GetName() &&
+				detail.Match.Kind == ocd.Resource.GetKind() &&
+				detail.Match.ApiVersion == ocd.Resource.GetAPIVersion() {
+
+				mcd := managed.ConnectionDetails(ocd.ConnectionDetails)
+
+				switch detail.Type {
+				case connectionDetailTypeFromConnectionSecretKey:
+					if mcd[*detail.FromConnectionSecretKey] == nil {
+						// We don't consider this an error because it's possible the
+						// key will still be written at some point in the future.
+						continue
+					}
+					out[detail.Name] = mcd[*detail.FromConnectionSecretKey]
+				case connectionDetailTypeFromFieldPath:
+					// Note we're checking that the error _is_ nil. If we hit an error
+					// we silently avoid including this connection secret. It's possible
+					// the path will start existing with a valid value in the future.
+					if b, err := fromFieldPath(ocd.Resource, *detail.FromFieldPath); err == nil {
+						out[detail.Name] = b
+					}
+				}
+			}
 		}
 	}
 
-	fmt.Printf("conDetails: %+v\n", conDetails)
-
 	return out, nil
+}
+
+// fromFieldPath tries to read the value from the supplied field path first as a
+// plain string. If this fails, it falls back to reading it as JSON.
+func fromFieldPath(from runtime.Object, path string) ([]byte, error) {
+	fromMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(from)
+	if err != nil {
+		return nil, err
+	}
+
+	str, err := fieldpath.Pave(fromMap).GetString(path)
+	if err == nil {
+		return []byte(str), nil
+	}
+
+	in, err := fieldpath.Pave(fromMap).GetValue(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(in)
 }
 
 // validateConnectionDetail checks if the connection detail is logically valid.
@@ -100,10 +135,18 @@ func validateConnectionDetail(cd connectionDetail) *field.Error {
 			return field.Required(field.NewPath("value"), "value connection detail requires a value")
 		}
 	case connectionDetailTypeFromConnectionSecretKey:
+		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
+			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
+		}
+
 		if cd.FromConnectionSecretKey == nil {
 			return field.Required(field.NewPath("fromConnectionSecretKey"), "from connection secret key connection detail requires a key")
 		}
 	case connectionDetailTypeFromFieldPath:
+		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
+			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
+		}
+
 		if cd.FromFieldPath == nil {
 			return field.Required(field.NewPath("fromFieldPath"), "from field path connection detail requires a field path")
 		}

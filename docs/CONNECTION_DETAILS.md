@@ -18,7 +18,9 @@ The connection details must be defined in the cue template `#connectionDetails`
 }
 
 #connectionDetail: {
-	Match: #match
+    // Used for FromConnectionSecretKey and FromFieldPath to match the
+    // ObservedComposed Resource to pull the values from
+	Match?: #match
 
 	// Name of the connection secret key that will be propagated to the
 	// connection secret of the composed resource.
