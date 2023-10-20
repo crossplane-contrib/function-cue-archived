@@ -4,7 +4,7 @@
 
 `stringArray : export this expression only`
 
-Configured under the `CUEInput.export.expression` field
+Configured under the `CUEInput.Export.Options.Expressions` field
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -26,8 +26,9 @@ spec:
       metadata:
         name: basic
       export:
-        expressions:
-        - yaml.MarshalStream(output)
+        options:
+          expressions:
+          - yaml.MarshalStream(output)
         value: |
           output: [
             ...
@@ -40,7 +41,7 @@ spec:
 
 
 Allows for injecting fields from the Observed XR into the cue template `@tag` fields.
-The tags injected are configured under the `CUEInput.export.inject` field
+The tags injected are configured under the `CUEInput.Export.Options.Inject` field
 
 ```yaml
 apiVersion: apiextensions.crossplane.io/v1
@@ -62,9 +63,10 @@ spec:
       metadata:
         name: basic
       export:
-        inject:
-        - name: "tagname"         # Name of the cue template @tag($name) to inject into
-          path: "metadata.name"   # Fieldpath of the ObservedXR to inject
+        options:
+          inject:
+          - name: "tagname"         # Name of the cue template @tag($name) to inject into
+            path: "metadata.name"   # Fieldpath of the ObservedXR to inject
         value: |
           name: string @tag(tagname)
 ```
