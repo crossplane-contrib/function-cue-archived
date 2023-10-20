@@ -1349,6 +1349,148 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+
+		"PatchResourcesMultiple": {
+			reason: "PatchResources should be able to patch multiple resources",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"options": {
+								"expressions": [
+									"yaml.MarshalStream(output)"
+								]
+							},
+							"resources": [
+								{
+									"name": "bucket",
+									"base": {
+									 	"apiVersion": "nobu.dev/v1",
+										 "kind": "Bucket",
+										 "metadata": {
+										  	"name": "test-bucket"
+										 }
+									}
+								},
+								{
+									"name": "iam-user",
+									"base": {
+										 "apiVersion": "nobu.dev/v1",
+										 "kind": "User",
+										 "metadata": {
+										   "name": "test-user"
+										 }
+									}
+								},
+								{
+									"name": "iam-role",
+									"base": {
+										 "apiVersion": "nobu.dev/v1",
+										 "kind": "Role",
+										 "metadata": {
+										  	"name": "test-role"
+										 }
+									}
+								}
+							],
+							"value": "output: [ \n  {\n    // Target the bucket by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"Bucket\"\n    metadata: name: \"test-bucket\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n    \n    spec: forProvider: policy: \"some-bucket-policy\"\n  }, \n  {\n    // Target the user by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"User\"\n    metadata: name: \"test-user\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n\n    spec: forProvider: name: \"somename\"\n  }, \n  {\n    // Target the bucket by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"Role\"\n    metadata: name: \"test-role\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n    \n    spec: forProvider: policy: \"some-role-policy\"\n  },\n]\n\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"test-bucket:Bucket\"",
+						},
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"test-role:Role\"",
+						},
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"test-user:User\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"test-bucket": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Bucket",
+									"metadata": {
+										"annotations": {
+											"nobu.dev/app": "someapp",
+											"nobu.dev/cueified": "true"
+										},
+										"name": "test-bucket"
+									},
+									"spec": {
+										"forProvider": {
+											"policy": "some-bucket-policy"
+										}
+									}
+								}`),
+							},
+							"test-user": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "User",
+									"metadata": {
+										"annotations": {
+											"nobu.dev/app": "someapp",
+											"nobu.dev/cueified": "true"
+										},
+										"name": "test-user"
+									},
+									"spec": {
+										"forProvider": {
+											"name": "somename"
+										}
+									}
+								}`),
+							},
+							"test-role": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "Role",
+									"metadata": {
+										"annotations": {
+											"nobu.dev/app": "someapp",
+											"nobu.dev/cueified": "true"
+										},
+										"name": "test-role"
+									},
+									"spec": {
+										"forProvider": {
+											"policy": "some-role-policy"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
 		"PatchResourcesTargeted": {
 			reason: "PatchResources targeting should work",
 			args: args{

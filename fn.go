@@ -135,6 +135,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// Based on the input target
 	// Store the objects into the output object
 	// For success messages later
+	// TODO move this giant switch into some other function
 	log.Info("Setting output to target")
 	output := successOutput{
 		target: in.Export.Target,
@@ -187,18 +188,12 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 			return rsp, nil
 		}
 
-		for dr, d := range desiredMatches {
-			conf.basename = dr.Resource.GetName()
-			conf.data = d
-			if err := addResourcesTo(desiredMatches, conf); err != nil {
-				response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
-				return rsp, nil
-			}
+		if err := addResourcesTo(desiredMatches, conf); err != nil {
+			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
+			return rsp, nil
 		}
 		output.object = cmpOut.data
 		output.msgCount = len(cmpOut.data)
-		//output.object = data
-		//output.msgCount = len(data)
 	case v1beta1.Resources:
 		conf.basename = in.Name
 		conf.data = cmpOut.data
@@ -212,7 +207,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.msgCount = len(cmpOut.data)
 	}
 
-	// Get the connection details and propogate them to the xr
+	// Get the connection details and propagate them to the xr
 	conn, err := extractConnectionDetails(observed, cmpOut.connectionData)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
