@@ -13,27 +13,6 @@ kind: XSubnetwork
 metadata:
   name: test-xrender
 ---
-apiVersion: s3.aws.upbound.io/v1beta1
-kind: Bucket
-metadata:
-  annotations:
-    crossplane.io/composition-resource-name: prime-objects-test-bucket
-  generateName: test-xrender-
-  labels:
-    crossplane.io/composite: test-xrender
-  name: test-bucket
-  ownerReferences:
-  - apiVersion: nopexample.org/v1
-    blockOwnerDeletion: true
-    controller: true
-    kind: XSubnetwork
-    name: test-xrender
-    uid: ""
-spec:
-  forProvider:
-    policy: some-bucket-policy
-    region: us-east-2
----
 apiVersion: ec2.aws.upbound.io/v1beta1
 kind: Instance
 metadata:
@@ -54,6 +33,29 @@ spec:
   forProvider:
     ami: ami-0d9858aa3c6322f73
     instanceType: t2.micro
+    region: us-east-2
+---
+apiVersion: s3.aws.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: prime-objects-test-bucket
+    nobu.dev/app: someapp
+    nobu.dev/cueified: "true"
+  generateName: test-xrender-
+  labels:
+    crossplane.io/composite: test-xrender
+  name: test-bucket
+  ownerReferences:
+  - apiVersion: nopexample.org/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XSubnetwork
+    name: test-xrender
+    uid: ""
+spec:
+  forProvider:
+    policy: some-bucket-policy
     region: us-east-2
 ---
 apiVersion: xrender.crossplane.io/v1beta1
