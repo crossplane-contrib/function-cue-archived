@@ -42,6 +42,8 @@ type Function struct {
 // Add this data to either the Observed XR,
 // Specific Existing Desired XRs,
 // Or new DesiredComposed resources are created,
+//
+// TODO(nobu): refactor this
 func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequest) (*fnv1beta1.RunFunctionResponse, error) {
 	log := f.log.WithValues("tag", req.GetMeta().GetTag())
 	log.Info("Running Function")
@@ -87,6 +89,13 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 	log.Debug(fmt.Sprintf("DesiredComposed resources: %d", len(desired)))
+	// The composed resources desired by any previous Functions in the pipeline.
+	observed, err := request.GetObservedComposedResources(req)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrapf(err, "cannot get desired composed resources from %T", req))
+		return rsp, nil
+	}
+	log.Debug(fmt.Sprintf("ObservedComposed resources: %d", len(observed)))
 
 	var (
 		outputFmt = outputJSON
@@ -111,7 +120,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// parseData: true
 	// The output used is produced as []map[string]interface{}
 	log.Info("compiling cue template from input")
-	data, out, err := cueCompile(outputFmt, *in, compileOpts{
+	cmpOut, err := cueCompile(outputFmt, *in, compileOpts{
 		parseData: true,
 		tags:      tags,
 	})
@@ -119,7 +128,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		response.Fatal(rsp, errors.Wrap(err, "failed compiling cue template"))
 		return rsp, nil
 	}
-	log.Debug(fmt.Sprintf("CUE compile output:\n%s", out))
+	log.Debug(fmt.Sprintf("CUE compile output:\n%s", cmpOut.string))
+	log.Debug(fmt.Sprintf("Connection Data: %+v\n", cmpOut.connectionData))
 
 	// Add the compiled data to the desired resources
 	// Based on the input target
@@ -134,7 +144,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 	switch output.target {
 	case v1beta1.XR:
-		conf.data = data
+		conf.data = cmpOut.data
 		if err := addResourcesTo(dxr, conf); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to XR"))
 			return rsp, nil
@@ -143,7 +153,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		output.msgCount = 1
 	case v1beta1.PatchDesired:
 		log.Debug("Matching PatchDesired Resources")
-		desiredMatches, err := matchResources(desired, data)
+		desiredMatches, err := matchResources(desired, cmpOut.data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to desired"))
 			return rsp, nil
@@ -154,8 +164,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 			response.Fatal(rsp, errors.Wrapf(err, "cannot update existing DesiredComposed"))
 			return rsp, nil
 		}
-		output.object = data
-		output.msgCount = len(data)
+		output.object = cmpOut.data
+		output.msgCount = len(cmpOut.data)
 	case v1beta1.PatchResources:
 		// Render the List of DesiredComposed resources from the input
 		// Update the existing desired map to be created as a base
@@ -171,7 +181,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		}
 
 		// Match the data to the desired resources
-		desiredMatches, err := matchResources(desired, data)
+		desiredMatches, err := matchResources(desired, cmpOut.data)
 		if err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot match resources to input resources"))
 			return rsp, nil
@@ -179,33 +189,50 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 
 		for dr, d := range desiredMatches {
 			conf.basename = dr.Resource.GetName()
-			data = d
+			conf.data = d
 			if err := addResourcesTo(desiredMatches, conf); err != nil {
 				response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
 				return rsp, nil
 			}
 		}
-		output.object = data
-		output.msgCount = len(data)
+		output.object = cmpOut.data
+		output.msgCount = len(cmpOut.data)
+		//output.object = data
+		//output.msgCount = len(data)
 	case v1beta1.Resources:
 		conf.basename = in.Name
-		conf.data = data
+		conf.data = cmpOut.data
 		if err := addResourcesTo(desired, conf); err != nil {
 			response.Fatal(rsp, errors.Wrapf(err, "cannot add resources to DesiredComposed"))
 			return rsp, nil
 		}
 		// Pass data here instead of desired
 		// This is because there already may be desired objects
-		output.object = data
-		output.msgCount = len(data)
+		output.object = cmpOut.data
+		output.msgCount = len(cmpOut.data)
+	}
+
+	// Get the connection details and propogate them to the xr
+	conn, err := extractConnectionDetails(observed, cmpOut.connectionData)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
+		return rsp, nil
+	}
+	log.Debug(fmt.Sprintf("Setting %d connectionDetails", len(conn)))
+	for k, v := range conn {
+		dxr.ConnectionDetails[k] = v
 	}
 
 	// Set dxr and desired state
+	log.Debug("Setting desired XR state to %+v", dxr.Resource)
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composite resource in %T", rsp))
 		return rsp, nil
 	}
 
+	for _, d := range desired {
+		log.Debug(fmt.Sprintf("Setting DesiredComposed state to %+v", d.Resource))
+	}
 	if err := response.SetDesiredComposedResources(rsp, desired); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composed resources in %T", rsp))
 		return rsp, nil
@@ -355,8 +382,8 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 				Object: d,
 			}
 
-			// If there are multiple resources to add
 			// Add the resource name as a suffix to the basename
+			// if there are multiple resources to add
 			if len(conf.data) > 1 {
 				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, u.GetName()))
 			}

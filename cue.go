@@ -247,68 +247,120 @@ type compileOpts struct {
 	tags      []string
 }
 
+const (
+	// conDetailsExpr is the string representation of connection details to be passed
+	// From the user to function-cue
+	conDetailsExpr = "json.MarshalStream(#connectionDetails)"
+)
+
+var (
+	errConnectionDetailsNotFound = fmt.Errorf("failed to validate: reference \"#connectionDetails\" not found")
+)
+
+type compileOutput struct {
+	// Data is the parsed output data, excluding configuration expressions
+	data           []map[string]interface{}
+	connectionData []connectionDetail
+	string         string
+}
+
 // cueCompile starting point for cue compilation
 // Compiles a CUE template depending on the CUEInput configuration
 // Passed in input and defined by the cueOutputFmt
 // Returns both an array of parsed maps of the data and string representations of the data
-func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) ([]map[string]interface{}, string, error) {
+//
+// #connectionDetails is injected into the expressionList in order to allow the user to provider
+// connectionDetails per document
+// This will probably need to be refactored if more information is passed to the compiler this way
+func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (compileOutput, error) {
 	var (
-		atLeastOnce = true
-		i           = 0
-		cmpStr      string
-		outputData  []map[string]interface{}
+		output compileOutput
 	)
+	// Build list of expressions from input
 	exprs, err := buildExprs(input)
 	if err != nil {
-		return outputData, cmpStr, fmt.Errorf("failed building expression(s): %w", err)
+		return output, fmt.Errorf("failed building expression(s): %w", err)
 	}
-	if len(exprs) != len(input.Export.Options.Expressions) {
-		return outputData, cmpStr, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
+	// #connectionDetails expression is always injected into the end of the expression list
+	if len(exprs) != len(input.Export.Options.Expressions)+1 {
+		return output, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
 	}
-	// Run at least one time
-	for atLeastOnce || i < len(exprs) {
-		var (
-			err error
-			c   *compiler
+	// if the only expression in the list is #connectionDetails
+	if len(exprs) == 1 {
+		// add a nil expression to the beginning
+		exprs = append([]*ast.Expr{nil}, exprs...)
+	}
 
-			expr *ast.Expr = nil
+	// Run compilation per expression
+	// Output is appended to outputData
+	// Compile string output is added to cmpStr
+	// connection details is output to connectionData
+	for i, expr := range exprs {
+		var (
+			err        error
+			c          *compiler
+			conDetails bool
 		)
-		if i < len(input.Export.Options.Expressions) {
-			expr = &exprs[i]
+		// Refactor this to not be based on a count
+		// The last expression is always the injected #connectionDetails
+		if i == len(exprs)-1 {
+			conDetails = true
+			// streams need to be outputTXT
+			out = outputTXT
 		}
+
 		c, err = newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
-		if err != nil {
-			return outputData, cmpStr, fmt.Errorf("failed creating cue compiler: %w", err)
+		if err != nil && err.Error() == errConnectionDetailsNotFound.Error() {
+			// Condition - that there is no #connectionDetails expression
+			// #connectionDetails expression is at the end, so it is ok to break here
+			// If there are no connection details then an empty list is returned
+			break
+		} else if err != nil {
+			return output, fmt.Errorf("failed creating cue compiler: %w", err)
 		}
-		if err := c.Compile(); err != nil {
-			return outputData, cmpStr, fmt.Errorf("failed compiling cue template: %w", err)
+		if err = c.Compile(); err != nil {
+			return output, fmt.Errorf("failed compiling cue template: %w", err)
 		}
 
 		// only attempt to parse data if specified
 		if opts.parseData == true {
 			data, err := c.Parse()
 			if err != nil {
-				return outputData, cmpStr, fmt.Errorf("failed parsing cue output: %w", err)
+				return output, fmt.Errorf("failed parsing cue output: %w", err)
 			}
-			outputData = append(outputData, data...)
+
+			// The last expression is always the injected #connectionDetails
+			// This happens in buildExprs
+			if conDetails {
+				// this is a little silly to have to convert this back to a string
+				// maybe there's a better way to do this
+				tmp, err := json.Marshal(data)
+				if err != nil {
+					return output, fmt.Errorf("failed marshalling connection details: %w", err)
+				}
+				if err := json.Unmarshal(tmp, &output.connectionData); err != nil {
+					return output, fmt.Errorf("failed unmarshalling connection details: %w", err)
+				}
+				// output.connectionData = append(output.connectionData, data...)
+			} else {
+				output.data = append(output.data, data...)
+			}
 		}
 
 		// If there are multiple yaml documents, then separate them by ---
 		if out == outputTXT || out == outputYAML {
-			if cmpStr == "" {
-				cmpStr += c.String()
+			if output.string == "" {
+				output.string += c.String()
 			} else {
-				cmpStr += fmt.Sprintf("---\n%s", c.String())
+				output.string += fmt.Sprintf("---\n%s", c.String())
 			}
 		} else if out == outputJSON || out == outputCUE {
 			// Multiple json documents do not need to be separated
-			cmpStr += c.String()
+			output.string += c.String()
 		}
-		atLeastOnce = false
-		i++
 	}
 
-	return outputData, cmpStr, nil
+	return output, nil
 }
 
 // ParseFile parses a single-argument file specifier, such as when a file is
@@ -391,8 +443,10 @@ func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 }
 
 // buildExprs takes input from the CUEInput and builds cue compatible expressions to be passed to the cue compiler
-func buildExprs(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
-	for _, expr := range input.Export.Options.Expressions {
+func buildExprs(input v1beta1.CUEInput) (exprs []*ast.Expr, err error) {
+	// #connectionDetails is always added to the end, whether it exists or not
+	// RunFunction will take these details and add them to the XR if found
+	for _, expr := range append(input.Export.Options.Expressions, conDetailsExpr) {
 		if expr != "" {
 			var parsed ast.Expr
 			parsed, err = parser.ParseExpr("--expression", expr)
@@ -400,7 +454,7 @@ func buildExprs(input v1beta1.CUEInput) (exprs []ast.Expr, err error) {
 				err = fmt.Errorf("failed to parse expression: %w", err)
 				return
 			}
-			exprs = append(exprs, parsed)
+			exprs = append(exprs, &parsed)
 		}
 	}
 	return

@@ -11,6 +11,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // CUEInput can be used to provide input to this Function.
@@ -30,15 +31,11 @@ func (in CUEInput) Validate() error {
 		return errors.New("value cannot be empty")
 	}
 
-	allowedTarget := false
-	for _, target := range []Target{PatchDesired, PatchResources, Resources, XR} {
-		if target == in.Export.Target {
-			allowedTarget = true
-			break
-		}
-	}
-	if !allowedTarget {
-		return fmt.Errorf("invalid target %s", in.Export.Target)
+	switch in.Export.Target {
+	// Allowed targets
+	case PatchDesired, PatchResources, Resources, XR:
+	default:
+		return field.Required(field.NewPath("type"), fmt.Sprintf("invalid target %s", in.Export.Target))
 	}
 
 	return nil

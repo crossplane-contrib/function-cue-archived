@@ -1456,6 +1456,92 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
+		"ConnectionDetailsPatchResources": {
+			reason: "PatchResources targeting should work",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname"
+										}
+									}
+								}
+							],
+							"value": "#connectionDetails: [\n\t{\n\t\tMatch: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"findme\"\n\t\t\tname:       \"testname\"\n\t\t}\n\n\t\tName:                    \"testname\"\n\t\tType:                    \"FromConnectionSecretKey\"\n\t\tFromConnectionSecretKey: \"thisisthekey\"\n\t},\n]\napiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"observe-connections": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "findme",
+									"metadata": {
+										"name": "testname"
+									}
+								}`),
+								ConnectionDetails: map[string][]byte{
+									"thisisthekey": []byte("secretvalue"),
+								},
+							},
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
+							Message:  "created resource \"testname:findme\"",
+						},
+					},
+					Desired: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+							ConnectionDetails: map[string][]byte{
+								"testname": []byte("secretvalue"),
+							},
+						},
+						Resources: map[string]*fnv1beta1.Resource{
+							"testname": {
+								Resource: resource.MustStructJSON(`{
+									"apiVersion": "nobu.dev/v1",
+									"kind": "findme",
+									"metadata": {
+										"name": "testname"
+									},
+									"spec": {
+										"forProvider": {
+											"region": "ap-northeast-1",
+											"router": "somerouter"
+										}
+									}
+								}`),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range cases {
