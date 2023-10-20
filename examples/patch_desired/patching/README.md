@@ -5,11 +5,6 @@
 $ xrender xr.yaml composition.yaml functions.yaml
 ```
 
-**Note**
-
-I think there is a bug with xrender somewhere, i will submit an issue once i know more, but it does not produce the most recent version of the desired resource
-But for some reason produces the previous version.  Logs and the fn_tests in this repo seem to indicate desired patching works but the xrender does not look right
-
 #### Produces
 ```yaml
 ---
