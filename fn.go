@@ -228,7 +228,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 
 	// Set dxr and desired state
-	log.Debug("Setting desired XR state to %+v", dxr.Resource)
+	log.Debug(fmt.Sprintf("Setting desired XR state to %+v", dxr.Resource))
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
 		response.Fatal(rsp, errors.Wrapf(err, "cannot set desired composite resource in %T", rsp))
 		return rsp, nil
