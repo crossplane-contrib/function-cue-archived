@@ -31,6 +31,7 @@ var testTable = []struct {
 	{outputJSON, "q: quo(-5, 2)", "{\n    \"q\": -2\n}\n", []string{}, []string{}},
 	{outputJSON, "r: rem(-5, 2)", "{\n    \"r\": -1\n}\n", []string{}, []string{}},
 	{outputJSON, "m: mod(-5, 2)", "{\n    \"m\": 1\n}\n", []string{}, []string{}},
+	{outputJSON, "x: \"\\(y._y)-bar\"\nlet y = {\n\t_y: \"foo\"\n}\n", "{\n    \"x\": \"foo-bar\"\n}\n", []string{}, []string{}},
 	{outputJSON, "#out: \"test\"", "{}\n", []string{}, []string{}},
 	{outputJSON, "#test: \"somestring\"\n\nout: \"this-is-concatting-\\(#test)\"\n", "{\n    \"out\": \"this-is-concatting-somestring\"\n}\n", []string{}, []string{}},
 	{outputJSON, "val: number @tag(val,type=int)\n", "{\n    \"val\": 3.14\n}\n", []string{}, []string{"val=3.14"}},
