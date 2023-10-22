@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Mitsuwa/function-cue/input/v1beta1"
+	"github.com/crossplane-contrib/function-cue/input/v1beta1"
 
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
@@ -426,6 +426,10 @@ var (
 // JSONPath(s) of the given object, it will then copy from 'data' at the given path
 // to the passed o object - at the same path, overwrite defines if this function should
 // be allowed to overwrite values or not, if not return cue like conflicting value error
+//
+// If the resource to write to 'o' contains a nil .Resource, setData will return an error
+// It is expected that the resource is created via composed.New() or composite.New() prior
+// to calling setData
 func setData(data any, path string, o any, overwrite bool) error {
 	switch val := data.(type) {
 	case map[string]interface{}:
@@ -469,6 +473,10 @@ func setData(data any, path string, o any, overwrite bool) error {
 			}
 
 			r := o.(*resource.DesiredComposed).Resource
+			if r == nil {
+				return errors.New("cannot set data on a nil DesiredComposed resource")
+			}
+
 			if curVal, err := r.GetValue(path); err != nil && !strings.Contains(err.Error(), errNoSuchField) {
 				return errors.Wrapf(err, "getting %s:%s in xr failed", path, data)
 			} else if curVal != nil && !overwrite {
@@ -485,6 +493,10 @@ func setData(data any, path string, o any, overwrite bool) error {
 			// on apiVersion, kind or metadata.name
 
 			r := o.(*resource.Composite).Resource
+			if r == nil {
+				return fmt.Errorf("cannot set data on a nil XR")
+			}
+
 			if curVal, err := r.GetValue(path); err != nil && !strings.Contains(err.Error(), errNoSuchField) {
 				return errors.Wrapf(err, "getting %s:%s in xr failed", path, data)
 			} else if curVal != nil && !overwrite {
