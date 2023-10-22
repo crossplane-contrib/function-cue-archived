@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Mitsuwa/function-cue/input/v1beta1"
+	"github.com/crossplane-contrib/function-cue/input/v1beta1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -30,6 +30,7 @@ var testTable = []struct {
 	{outputJSON, "q: quo(-5, 2)", "{\n    \"q\": -2\n}\n", []string{}, []string{}},
 	{outputJSON, "r: rem(-5, 2)", "{\n    \"r\": -1\n}\n", []string{}, []string{}},
 	{outputJSON, "m: mod(-5, 2)", "{\n    \"m\": 1\n}\n", []string{}, []string{}},
+	{outputJSON, "x: \"\\(y._y)-bar\"\nlet y = {\n\t_y: \"foo\"\n}\n", "{\n    \"x\": \"foo-bar\"\n}\n", []string{}, []string{}},
 	{outputJSON, "#out: \"test\"", "{}\n", []string{}, []string{}},
 	{outputJSON, "#test: \"somestring\"\n\nout: \"this-is-concatting-\\(#test)\"\n", "{\n    \"out\": \"this-is-concatting-somestring\"\n}\n", []string{}, []string{}},
 	{outputJSON, "val: number @tag(val,type=int)\n", "{\n    \"val\": 3.14\n}\n", []string{}, []string{"val=3.14"}},
@@ -102,6 +103,7 @@ var testFailTable = []struct {
 	{outputJSON, "package inject\n\n// @tag() is how we inject data\nenv:      *\"dev\" | string @tag(env)      // env has a default\ndatabase: string          @tag(database) // database is \"required\"\n\n// A schema for DBs with some defaults\n#DB: {\n\thost: #hosts[env]\n\tport: string | *\"5432\"\n\tdb:   database\n\n\t// interpolate the fields into the connection string\n\tconn: \"postgres://\\(host):\\(port)/\\(db)\"\n}\n\n// setup our database host mapping\n#hosts: [string]: string\n#hosts: {\n\tdev: \"postgres.dev\"\n\tstg: \"postgres.stg\"\n\tprd: \"postgres.prd\"\n}\n", "failed creating cue compiler: failed to validate: database: incomplete value string", []string{}},
 	{outputJSON, "val: number @tag(val,type=int)\n", "failed creating cue compiler: failed to validate: val: incomplete value number", []string{}},
 	{outputJSON, "env: string @tag(env,short=prod|staging)", "failed creating cue compiler: failed to validate: env: incomplete value string", []string{}},
+	{outputJSON, "x: \"\\(_y)-bar\"\n{\n\t_y: \"foo\"\n}\n", "failed creating cue compiler: failed to build: reference \"_y\" not found", []string{}},
 }
 
 // TestCUECompileFailures for failure strings, do not attempt to parse data in these tests

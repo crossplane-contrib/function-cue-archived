@@ -1,4 +1,4 @@
-module github.com/Mitsuwa/function-cue
+module github.com/crossplane-contrib/function-cue
 
 go 1.20
 

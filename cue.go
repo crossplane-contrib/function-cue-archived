@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Mitsuwa/function-cue/input/v1beta1"
+	"github.com/crossplane-contrib/function-cue/input/v1beta1"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
