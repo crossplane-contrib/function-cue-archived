@@ -1791,6 +1791,61 @@ func TestRunFunctionFailures(t *testing.T) {
 				},
 			},
 		},
+		"ConflictingValuesAnnotations": {
+			reason: "Conflicting Values without overwrite, PatchResources should fail on annotation key match",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname"
+										},
+										"spec": {
+											"metadata": {
+												"annotations": {
+													"rbac.authorization.k8s.io/autoupdate": "false"
+												}
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind:       \"findme\"\nmetadata: name: \"testname\"\nspec: metadata: annotations: {\n\t\"rbac.authorization.k8s.io/autoupdate\": \"true\"\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot add resources to DesiredComposed: cannot set data existing desired composed object: spec.metadata.annotations[rbac.authorization.k8s.io/autoupdate]: conflicting values \"false\" and \"true\"",
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+		},
 		"ConflictingPatchXRKind": {
 			reason: "XR Targetting should work",
 			args: args{
