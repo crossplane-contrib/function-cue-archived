@@ -7,7 +7,3 @@ The documents generated must have an `apiVersion`, `kind` and `name` associated 
 This apiVersion+kind+name is used to match the `CUEInput.Export.Resources` resources.
 
 If the patch count does not match the number of generated documents (not found documents), `function-cue` will error
-
-### TODO
-
-- Merging annotations and labels
