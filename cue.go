@@ -279,11 +279,11 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 	}
 	// #connectionDetails expression is always injected into the end of the expression list
 	// #readinessChecks expression is always injected into the end of the expression list
-	if len(exprs) != len(input.Export.Options.Expressions)+2 {
+	if len(exprs) != len(input.Export.Options.Expressions)+len(defaultExprs) {
 		return output, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
 	}
 	// if the only expression in the list is #connectionDetails and #readinessChecks
-	if len(exprs) == 2 {
+	if len(exprs) == len(defaultExprs) {
 		// add a nil expression to the beginning
 		exprs = append([]exprDetail{{expr: nil, exprTarget: document}}, exprs...)
 	}
@@ -471,13 +471,15 @@ var (
 	// readinessChecksExpr is the string representation of readiness checks to be passed
 	// From the user to function-cue
 	readinessChecksExpr = fmt.Sprintf("json.MarshalStream(#%s)", readinessChecks)
+	// defaultExprs contains a list of default expressions that are always run
+	defaultExprs = []string{conDetailsExpr, readinessChecksExpr}
 )
 
 // buildExprs takes input from the CUEInput and builds cue compatible expressions to be passed to the cue compiler
 func buildExprs(input v1beta1.CUEInput) (exprs []exprDetail, err error) {
 	// #connectionDetails is always added to the end, whether it exists or not
 	// RunFunction will take these details and add them to the XR if found
-	for _, expr := range append(input.Export.Options.Expressions, []string{conDetailsExpr, readinessChecksExpr}...) {
+	for _, expr := range append(input.Export.Options.Expressions, defaultExprs...) {
 		if expr != "" {
 			var parsed ast.Expr
 			parsed, err = parser.ParseExpr("--expression", expr)
