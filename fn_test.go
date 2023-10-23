@@ -7,11 +7,16 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/logging"
 	fnv1beta1 "github.com/crossplane/function-sdk-go/proto/v1beta1"
 	"github.com/crossplane/function-sdk-go/resource"
+	"github.com/crossplane/function-sdk-go/resource/composed"
+	"github.com/crossplane/function-sdk-go/resource/composite"
 	"github.com/crossplane/function-sdk-go/response"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func TestRunFunction(t *testing.T) {
@@ -1786,6 +1791,61 @@ func TestRunFunctionFailures(t *testing.T) {
 				},
 			},
 		},
+		"ConflictingValuesAnnotations": {
+			reason: "Conflicting Values without overwrite, PatchResources should fail on annotation key match",
+			args: args{
+				req: &fnv1beta1.RunFunctionRequest{
+					Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "patch-existing"
+						},
+						"export": {
+							"target": "PatchResources",
+							"resources": [
+								{
+									"name": "example-cluster",
+									"base": {
+										"apiVersion": "nobu.dev/v1",
+										"kind": "findme",
+										"metadata": {
+											"name": "testname"
+										},
+										"spec": {
+											"metadata": {
+												"annotations": {
+													"rbac.authorization.k8s.io/autoupdate": "false"
+												}
+											}
+										}
+									}
+								}
+							],
+							"value": "apiVersion: \"nobu.dev/v1\"\nkind:       \"findme\"\nmetadata: name: \"testname\"\nspec: metadata: annotations: {\n\t\"rbac.authorization.k8s.io/autoupdate\": \"true\"\n}\n"
+						}
+					}`),
+					Observed: &fnv1beta1.State{
+						Composite: &fnv1beta1.Resource{
+							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+			want: want{
+				rsp: &fnv1beta1.RunFunctionResponse{
+					Meta: &fnv1beta1.ResponseMeta{Ttl: durationpb.New(response.DefaultTTL)},
+					Results: []*fnv1beta1.Result{
+						{
+							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
+							Message:  "cannot add resources to DesiredComposed: cannot set data existing desired composed object: spec.metadata.annotations[rbac.authorization.k8s.io/autoupdate]: conflicting values \"false\" and \"true\"",
+						},
+					},
+					Desired: &fnv1beta1.State{},
+				},
+			},
+		},
 		"ConflictingPatchXRKind": {
 			reason: "XR Targetting should work",
 			args: args{
@@ -2017,6 +2077,366 @@ func TestRunFunctionFailures(t *testing.T) {
 			rsp, err := f.RunFunction(tc.args.ctx, tc.args.req)
 
 			if diff := cmp.Diff(tc.want.rsp, rsp, protocmp.Transform()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want rsp, +got rsp:\n%s", tc.reason, diff)
+			}
+
+			if diff := cmp.Diff(tc.want.err, err, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("%s\nf.RunFunction(...): -want err, +got err:\n%s", tc.reason, diff)
+			}
+		})
+	}
+}
+
+func TestSetData(t *testing.T) {
+
+	type args struct {
+		data      map[string]interface{}
+		on        any
+		overwrite bool
+	}
+	type want struct {
+		err error
+		out any
+	}
+
+	cases := map[string]struct {
+		reason string
+		args   args
+		want   want
+	}{
+		"DesiredComposedBasic": {
+			reason: "DesiredComposed should be able to set basic data",
+			args: args{
+				data: map[string]interface{}{
+					"kind": "testkind",
+					"metadata": map[string]interface{}{
+						"name": "testname",
+						"annotations": map[string]interface{}{
+							"nobu.dev/app": "someapp",
+						},
+					},
+					"spec": map[string]interface{}{
+						"forProvider": map[string]interface{}{
+							"something": "somevalue",
+						},
+					},
+				},
+				on: &resource.DesiredComposed{
+					Resource: composed.New(),
+				},
+			},
+			want: want{
+				out: &resource.DesiredComposed{
+					Resource: &composed.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"annotations": map[string]interface{}{
+										"nobu.dev/app": "someapp",
+									},
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"something": "somevalue",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"DesiredComposedDeeperCopies": {
+			reason: "DesiredComposed should be able to set basic data",
+			args: args{
+				data: map[string]interface{}{
+					"apiVersion": "nobu.dev/v1",
+					"kind":       "brother",
+					"metadata": map[string]interface{}{
+						"name": "ignored",
+						"annotations": map[string]interface{}{
+							"nobu.dev/app": "someapp",
+						},
+					},
+					"spec": map[string]interface{}{
+						"forProvider": map[string]interface{}{
+							"something": "somevalue",
+							"network":   "network",
+							"clusterRef": map[string]interface{}{
+								"name": "example-cluster",
+							},
+						},
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"name": "testname",
+									"labels": map[string]interface{}{
+										"kubernetes.io/serviceaccount": "sa",
+										"kubernetes.io/rbac":           "variant",
+									},
+								},
+								"env": []string{
+									"env1=env1val",
+									"env2=env2val",
+								},
+							},
+						},
+					},
+				},
+				on: &resource.DesiredComposed{
+					Resource: composed.New(),
+				},
+			},
+			want: want{
+				out: &resource.DesiredComposed{
+					Resource: &composed.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"annotations": map[string]interface{}{
+										"nobu.dev/app": "someapp",
+									},
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"something": "somevalue",
+										"network":   "network",
+										"clusterRef": map[string]interface{}{
+											"name": "example-cluster",
+										},
+									},
+									"template": map[string]interface{}{
+										"spec": map[string]interface{}{
+											"metadata": map[string]interface{}{
+												"name": "testname",
+												"labels": map[string]interface{}{
+													"kubernetes.io/serviceaccount": "sa",
+													"kubernetes.io/rbac":           "variant",
+												},
+											},
+											"env": []any{
+												"env1=env1val",
+												"env2=env2val",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"XRBasic": {
+			reason: "XR should be able to set basic data",
+			args: args{
+				data: map[string]interface{}{
+					"apiVersion": "nobu.dev/v1",
+					"kind":       "testkind",
+					"metadata": map[string]interface{}{
+						"name": "testname",
+						"annotations": map[string]interface{}{
+							"nobu.dev/app": "someapp",
+						},
+					},
+					"spec": map[string]interface{}{
+						"forProvider": map[string]interface{}{
+							"something": "somevalue",
+						},
+					},
+				},
+				on: &resource.Composite{
+					Resource: composite.New(),
+				},
+			},
+			want: want{
+				out: &resource.Composite{
+					Resource: &composite.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								// XR sets gvk+name
+								"apiVersion": "nobu.dev/v1",
+								"kind":       "testkind",
+								"metadata": map[string]interface{}{
+									"name": "testname",
+									"annotations": map[string]interface{}{
+										"nobu.dev/app": "someapp",
+									},
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"something": "somevalue",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"XROverwrite": {
+			reason: "XR should be able to set overwrite data",
+			args: args{
+				data: map[string]interface{}{
+					"kind": "testkind",
+					"metadata": map[string]interface{}{
+						"name": "testname",
+						"annotations": map[string]interface{}{
+							"nobu.dev/app": "someapp",
+						},
+					},
+					"spec": map[string]interface{}{
+						"forProvider": map[string]interface{}{
+							"something": "somevalue",
+						},
+					},
+				},
+				on: &resource.Composite{
+					Resource: &composite.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"kind": "overwriteme",
+							},
+						},
+					},
+				},
+				overwrite: true,
+			},
+			want: want{
+				out: &resource.Composite{
+					Resource: &composite.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"kind": "testkind",
+								"metadata": map[string]interface{}{
+									"name": "testname",
+									"annotations": map[string]interface{}{
+										"nobu.dev/app": "someapp",
+									},
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"something": "somevalue",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"XRDeeperCopy": {
+			reason: "DesiredComposed should be able to set data at many levels without conflictions",
+			args: args{
+				data: map[string]interface{}{
+					"apiVersion": "nobu.dev/v1",
+					"kind":       "brother",
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							"nobu.dev/app": "someapp",
+						},
+					},
+					"spec": map[string]interface{}{
+						"forProvider": map[string]interface{}{
+							"network": "network",
+							"clusterRef": map[string]interface{}{
+								"name": "example-cluster",
+							},
+						},
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"name": "testname",
+									"labels": map[string]interface{}{
+										"kubernetes.io/rbac": "variant",
+									},
+								},
+								"env": []string{
+									"env1=env1val",
+									"env2=env2val",
+								},
+							},
+						},
+					},
+				},
+				on: &resource.Composite{
+					Resource: &composite.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"name": "whatsinaname",
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"another":   "existing",
+										"something": "someothervalue",
+									},
+									"template": map[string]interface{}{
+										"spec": map[string]interface{}{
+											"metadata": map[string]interface{}{
+												"labels": map[string]interface{}{
+													"kubernetes.io/serviceaccount": "sa",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: want{
+				out: &resource.Composite{
+					Resource: &composite.Unstructured{
+						Unstructured: unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"apiVersion": "nobu.dev/v1",
+								"kind":       "brother",
+								"metadata": map[string]interface{}{
+									"name": "whatsinaname",
+									"annotations": map[string]interface{}{
+										"nobu.dev/app": "someapp",
+									},
+								},
+								"spec": map[string]interface{}{
+									"forProvider": map[string]interface{}{
+										"another":   "existing",
+										"network":   "network",
+										"something": "someothervalue",
+										"clusterRef": map[string]interface{}{
+											"name": "example-cluster",
+										},
+									},
+									"template": map[string]interface{}{
+										"spec": map[string]interface{}{
+											"metadata": map[string]interface{}{
+												"name": "testname",
+												"labels": map[string]interface{}{
+													"kubernetes.io/serviceaccount": "sa",
+													"kubernetes.io/rbac":           "variant",
+												},
+											},
+											"env": []any{
+												"env1=env1val",
+												"env2=env2val",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			err := setData(tc.args.data, "", tc.args.on, tc.args.overwrite)
+
+			if diff := cmp.Diff(tc.want.out, tc.args.on, protocmp.Transform()); diff != "" {
 				t.Errorf("%s\nf.RunFunction(...): -want rsp, +got rsp:\n%s", tc.reason, diff)
 			}
 
