@@ -218,6 +218,15 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		dxr.ConnectionDetails[k] = v
 	}
 
+	// Reconcile the readiness data from observed -> desired
+	// depending on readiness propagation configuration from readinessData
+	// set dxr to ready if all the readiness checks pass
+	err = reconcileReadiness(dxr, observed, desired, cmpOut.readinessData)
+	if err != nil {
+		response.Fatal(rsp, errors.Wrap(err, "failed checking readiness: xr is not ready"))
+		return rsp, nil
+	}
+
 	// Set dxr and desired state
 	log.Debug(fmt.Sprintf("Setting desired XR state to %+v", dxr.Resource))
 	if err := response.SetDesiredCompositeResource(rsp, dxr); err != nil {
