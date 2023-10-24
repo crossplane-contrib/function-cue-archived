@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
@@ -32,7 +31,7 @@ const (
 type readinessCheck struct {
 	// Match is used to associate the connection detail to an object
 	// Match is required for FromConnectionSecretKey and FromFieldPath
-	Match match `json:"match,omitempty"`
+	Match match `json:"match"`
 	// Type indicates the type of probe you'd like to use.
 	Type readinessCheckType `json:"type"`
 
@@ -68,7 +67,7 @@ const (
 
 // reconcileReadiness compares the observed map names to the desired map names and reconcicles the desired with observed health
 // it then checks the passed readinessChecks against the observed map and propagates this information to the xr
-func reconcileReadiness(dxr *rresource.Composite, observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
+func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
 	filter := func(ocd rresource.ObservedComposed, data []readinessCheck) []readinessCheck {
 		rc := []readinessCheck{}
 		for _, d := range data {
@@ -82,7 +81,7 @@ func reconcileReadiness(dxr *rresource.Composite, observed map[rresource.Name]rr
 	for name, ocd := range observed {
 		dcd, ok := desired[name]
 		if !ok {
-			// If the desired map doesnt have the observed name, skip readiness checks
+			// If the desired map doesn't have the observed name, skip readiness checks
 			continue
 		}
 		rc := filter(ocd, data)
