@@ -8,40 +8,43 @@ into the xr
 The readiness checks must be defined in the cue template `#readinessChecks`
 
 ```cue
-// Following the Schema
+// Following the v
 #matchConditionReadinessCheck: {
-	// Type indicates the type of condition you'd like to use.
-	Type: string
+        // Type indicates the type of condition you'd like to use.
+        // https://pkg.go.dev/github.com/crossplane/crossplane-runtime@v1.13.0/apis/common/v1#ConditionType
+        Type: "Ready" | "Synced"
 
-	// Status is the status of the condition you'd like to match.
-	Status: string
+        // Status is the status of the condition you'd like to match.
+        // https://pkg.go.dev/k8s.io/api/core/v1#ConditionStatus
+        Status: "True" | "False" | "Unknown"
 }
 
 #match: {
-	apiVersion: string
-	kind:       string
-	name:       string
+        apiVersion: string
+        kind:       string
+        name:       string
 }
 
 #readinessCheck: {
-    // Used for FromConnectionSecretKey and FromFieldPath to match the
-    // ObservedComposed Resource to pull the values from
-	Match?: #match
+        // Used to match the ObservedComposed Resource to pull the values from
+        Match: #match
+        // Type indicates the type of probe to use.
+        Type: "MatchCondition" | "MatchEmpty" | "MatchInteger" | "MatchString" | "MatchTrue" | "MatchFalse" | "None"
 
-	// FieldPath shows the path of the field whose value will be used.
-	FieldPath?: string
+        // FieldPath shows the path of the field whose value will be used.
+        FieldPath?: string
 
-	// MatchString is the value you'd like to match if you're using "MatchString" type.
-	MatchString?: string
+        // MatchString is the value you'd like to match if you're using "MatchString" type.
+        MatchString?: string
 
-	// MatchInt is the value you'd like to match if you're using "MatchInt" type.
-	MatchInteger?: int64
+        // MatchInt is the value you'd like to match if you're using "MatchInt" type.
+        MatchInteger?: int64
 
-	// MatchCondition specifies the condition you'd like to match if you're using "MatchCondition" type.
-	MatchCondition?: #matchConditionReadinessCheck
+        // MatchCondition specifies the condition you'd like to match if you're using "MatchCondition" type.
+        MatchCondition?: #matchConditionReadinessCheck
 }
 
-#readinessChecks: [...#readinessChecks] & [
+#readinessChecks: [...#readinessCheck] & [
     // insert details here
 ]
 ```

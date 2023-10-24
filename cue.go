@@ -306,11 +306,9 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 		if err != nil &&
 			(err.Error() == errConnectionDetailsNotFound.Error() ||
 				err.Error() == errReadinessChecksNotFound.Error()) {
-			// Condition - that there is no #connectionDetails expression
-			// #connectionDetails expression is at the end, so it is ok to break here
-			// #readinessChecks expression is at the end, so it is ok to break here
+			// Condition - that there is no #connectionDetails or #readinessChecks expression
 			// If there are no connection details or readiness checks then an empty list is returned
-			break
+			continue
 		} else if err != nil {
 			return output, fmt.Errorf("failed creating cue compiler: %w", err)
 		}

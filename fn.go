@@ -221,7 +221,8 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// Reconcile the readiness data from observed -> desired
 	// depending on readiness propagation configuration from readinessData
 	// set dxr to ready if all the readiness checks pass
-	err = reconcileReadiness(dxr, observed, desired, cmpOut.readinessData)
+	log.Debug("Reconciling readiness")
+	err = reconcileReadiness(observed, desired, cmpOut.readinessData)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed checking readiness: xr is not ready"))
 		return rsp, nil
