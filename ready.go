@@ -7,6 +7,7 @@ import (
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
+	rresource "github.com/crossplane/function-sdk-go/resource"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -29,6 +30,9 @@ const (
 // readinessCheck is used to indicate how to tell whether a resource is ready
 // for consumption
 type readinessCheck struct {
+	// Match is used to associate the connection detail to an object
+	// Match is required for FromConnectionSecretKey and FromFieldPath
+	Match match `json:"match,omitempty"`
 	// Type indicates the type of probe you'd like to use.
 	Type readinessCheckType `json:"type"`
 
@@ -62,6 +66,10 @@ const (
 
 	errFmtRunCheck = "cannot run readiness check at index %d"
 )
+
+func reconcileReadiness(dxr *rresource.Composite, observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
+	return nil
+}
 
 // A ReadinessChecker checks whether a composed resource is ready or not.
 type ReadinessChecker interface {

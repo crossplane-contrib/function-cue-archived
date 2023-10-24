@@ -1,4 +1,4 @@
-# cue-function
+# function-cue
 
 A [cuelang](https://cuelang.org/) integration for Crossplane's [Composition Functions](https://docs.crossplane.io/latest/concepts/composition-functions/).
 
