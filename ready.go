@@ -63,11 +63,39 @@ type matchConditionReadinessCheck struct {
 const (
 	errInvalidCheck = "invalid"
 	errPaveObject   = "cannot lookup field paths in supplied object"
-
-	errFmtRunCheck = "cannot run readiness check at index %d"
+	errFmtRunCheck  = "cannot run readiness check at index %d"
 )
 
+// reconcileReadiness compares the observed map names to the desired map names and reconcicles the desired with observed health
+// it then checks the passed readinessChecks against the observed map and propagates this information to the xr
 func reconcileReadiness(dxr *rresource.Composite, observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
+	filter := func(ocd rresource.ObservedComposed, data []readinessCheck) []readinessCheck {
+		rc := []readinessCheck{}
+		for _, d := range data {
+			if d.Match.Name == ocd.Resource.GetName() && d.Match.ApiVersion == ocd.Resource.GetAPIVersion() && d.Match.Kind == ocd.Resource.GetKind() {
+				rc = append(rc, d)
+			}
+		}
+		return rc
+	}
+
+	for name, ocd := range observed {
+		dcd, ok := desired[name]
+		if !ok {
+			// If the desired map doesnt have the observed name, skip readiness checks
+			continue
+		}
+		rc := filter(ocd, data)
+
+		ready, err := IsReady(context.Background(), ocd.Resource, rc...)
+		if err != nil {
+			return errors.Wrap(err, "cannot determine resource readiness")
+		}
+		if ready {
+			dcd.Ready = rresource.ReadyTrue
+		}
+	}
+
 	return nil
 }
 
