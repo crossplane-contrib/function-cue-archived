@@ -1,4 +1,4 @@
-# cue-function
+# function-cue
 
 A [cuelang](https://cuelang.org/) integration for Crossplane's [Composition Functions](https://docs.crossplane.io/latest/concepts/composition-functions/).
 
@@ -98,7 +98,7 @@ kind: Function
 metadata:
   name: function-cue
 spec:
-  package: mitsuwa/function-cue:v0.1.0
+  package: mitsuwa/function-cue:v0.1.1
 ```
 
 ## Debugging

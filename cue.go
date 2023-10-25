@@ -247,20 +247,16 @@ type compileOpts struct {
 	tags      []string
 }
 
-const (
-	// conDetailsExpr is the string representation of connection details to be passed
-	// From the user to function-cue
-	conDetailsExpr = "json.MarshalStream(#connectionDetails)"
-)
-
 var (
-	errConnectionDetailsNotFound = fmt.Errorf("failed to validate: reference \"#connectionDetails\" not found")
+	errConnectionDetailsNotFound = fmt.Errorf("failed to validate: reference \"#%s\" not found", connectionDetails)
+	errReadinessChecksNotFound   = fmt.Errorf("failed to validate: reference \"#%s\" not found", readinessChecks)
 )
 
 type compileOutput struct {
 	// Data is the parsed output data, excluding configuration expressions
 	data           []map[string]interface{}
 	connectionData []connectionDetail
+	readinessData  []readinessCheck
 	string         string
 }
 
@@ -282,39 +278,37 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 		return output, fmt.Errorf("failed building expression(s): %w", err)
 	}
 	// #connectionDetails expression is always injected into the end of the expression list
-	if len(exprs) != len(input.Export.Options.Expressions)+1 {
+	// #readinessChecks expression is always injected into the end of the expression list
+	if len(exprs) != len(input.Export.Options.Expressions)+len(defaultExprs) {
 		return output, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
 	}
-	// if the only expression in the list is #connectionDetails
-	if len(exprs) == 1 {
+	// if the only expression in the list is #connectionDetails and #readinessChecks
+	if len(exprs) == len(defaultExprs) {
 		// add a nil expression to the beginning
-		exprs = append([]*ast.Expr{nil}, exprs...)
+		exprs = append([]exprDetail{{expr: nil, exprTarget: document}}, exprs...)
 	}
 
 	// Run compilation per expression
 	// Output is appended to outputData
 	// Compile string output is added to cmpStr
 	// connection details is output to connectionData
-	for i, expr := range exprs {
+	for _, expr := range exprs {
 		var (
-			err        error
-			c          *compiler
-			conDetails bool
+			err error
+			c   *compiler
 		)
-		// Refactor this to not be based on a count
-		// The last expression is always the injected #connectionDetails
-		if i == len(exprs)-1 {
-			conDetails = true
-			// streams need to be outputTXT
+		if expr.exprTarget != document {
+			// readinessChecks and connectionDetails are always output as Streams
 			out = outputTXT
 		}
 
-		c, err = newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
-		if err != nil && err.Error() == errConnectionDetailsNotFound.Error() {
-			// Condition - that there is no #connectionDetails expression
-			// #connectionDetails expression is at the end, so it is ok to break here
-			// If there are no connection details then an empty list is returned
-			break
+		c, err = newCompiler(input.Export.Value, inputCUE, out, expr.expr, opts.tags)
+		if err != nil &&
+			(err.Error() == errConnectionDetailsNotFound.Error() ||
+				err.Error() == errReadinessChecksNotFound.Error()) {
+			// Condition - that there is no #connectionDetails or #readinessChecks expression
+			// If there are no connection details or readiness checks then an empty list is returned
+			continue
 		} else if err != nil {
 			return output, fmt.Errorf("failed creating cue compiler: %w", err)
 		}
@@ -329,19 +323,27 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 				return output, fmt.Errorf("failed parsing cue output: %w", err)
 			}
 
-			// The last expression is always the injected #connectionDetails
-			// This happens in buildExprs
-			if conDetails {
+			// If the expression is a readinessCheck or connectionDetails configuration
+			// Add that data to the specific output
+			if expr.exprTarget != document {
 				// this is a little silly to have to convert this back to a string
 				// maybe there's a better way to do this
 				tmp, err := json.Marshal(data)
 				if err != nil {
 					return output, fmt.Errorf("failed marshalling connection details: %w", err)
 				}
-				if err := json.Unmarshal(tmp, &output.connectionData); err != nil {
-					return output, fmt.Errorf("failed unmarshalling connection details: %w", err)
+
+				if expr.exprTarget == connectionDetails {
+					if err := json.Unmarshal(tmp, &output.connectionData); err != nil {
+						return output, fmt.Errorf("failed unmarshalling connection details: %w", err)
+					}
+				} else if expr.exprTarget == readinessChecks {
+					if err := json.Unmarshal(tmp, &output.readinessData); err != nil {
+						return output, fmt.Errorf("failed unmarshalling readiness checks: %w", err)
+					}
+				} else {
+					return output, fmt.Errorf("unknown exprTarget %s", expr.exprTarget)
 				}
-				// output.connectionData = append(output.connectionData, data...)
 			} else {
 				output.data = append(output.data, data...)
 			}
@@ -442,11 +444,40 @@ func buildTags(tags []v1beta1.Tag, xr *resource.Composite) ([]string, error) {
 	return res, nil
 }
 
+// exprDetail holds configuration for an expression and what its output data parsing should target to
+type exprDetail struct {
+	expr       *ast.Expr
+	exprTarget exprTarget
+}
+
+// exprTarget are the available expression targets to parse the output data to
+type exprTarget string
+
+const (
+	// document target implies the expression is to be parsed for additional or patch document data
+	document exprTarget = "document"
+	// connectionDetails targets the compilation data to store into connectionDetails
+	connectionDetails exprTarget = "connectionDetails"
+	// readienssChecks targets the compilation data to be stored into readinessChecks
+	readinessChecks exprTarget = "readinessChecks"
+)
+
+var (
+	// conDetailsExpr is the string representation of connection details to be passed
+	// From the user to function-cue
+	conDetailsExpr = fmt.Sprintf("json.MarshalStream(#%s)", connectionDetails)
+	// readinessChecksExpr is the string representation of readiness checks to be passed
+	// From the user to function-cue
+	readinessChecksExpr = fmt.Sprintf("json.MarshalStream(#%s)", readinessChecks)
+	// defaultExprs contains a list of default expressions that are always run
+	defaultExprs = []string{conDetailsExpr, readinessChecksExpr}
+)
+
 // buildExprs takes input from the CUEInput and builds cue compatible expressions to be passed to the cue compiler
-func buildExprs(input v1beta1.CUEInput) (exprs []*ast.Expr, err error) {
+func buildExprs(input v1beta1.CUEInput) (exprs []exprDetail, err error) {
 	// #connectionDetails is always added to the end, whether it exists or not
 	// RunFunction will take these details and add them to the XR if found
-	for _, expr := range append(input.Export.Options.Expressions, conDetailsExpr) {
+	for _, expr := range append(input.Export.Options.Expressions, defaultExprs...) {
 		if expr != "" {
 			var parsed ast.Expr
 			parsed, err = parser.ParseExpr("--expression", expr)
@@ -454,7 +485,13 @@ func buildExprs(input v1beta1.CUEInput) (exprs []*ast.Expr, err error) {
 				err = fmt.Errorf("failed to parse expression: %w", err)
 				return
 			}
-			exprs = append(exprs, &parsed)
+			detail := exprDetail{expr: &parsed, exprTarget: document}
+			if expr == conDetailsExpr {
+				detail.exprTarget = connectionDetails
+			} else if expr == readinessChecksExpr {
+				detail.exprTarget = readinessChecks
+			}
+			exprs = append(exprs, detail)
 		}
 	}
 	return

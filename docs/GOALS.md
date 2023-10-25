@@ -6,6 +6,7 @@
 ### TODO
 
 1. Support selection matching based on `resource.Name`
+1. Support importing non stdlib packages
 1. All of the `cue export` optional args to be implemented - see [EXPORT_OPTIONS.md](EXPORT_OPTIONS.md)
 1. Add support for loading cue files from configmap
    1. For example, identifiers can be stored in configmaps for managed resources
