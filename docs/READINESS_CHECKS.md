@@ -28,6 +28,7 @@ The readiness checks must be defined in the cue template `#readinessChecks`
 #readinessCheck: {
         // Used to match the ObservedComposed Resource to pull the values from
         Match: #match
+
         // Type indicates the type of probe to use.
         Type: "MatchCondition" | "MatchEmpty" | "MatchInteger" | "MatchString" | "MatchTrue" | "MatchFalse" | "None"
 
