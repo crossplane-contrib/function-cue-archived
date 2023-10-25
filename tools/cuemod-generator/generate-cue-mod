@@ -9,7 +9,7 @@ declare -a PROVIDERS=( "provider-aws@v0.44.2" "provider-azure@v0.20.0" "provider
 for p in "${PROVIDERS[@]}"; do
     go get "github.com/crossplane-contrib/${p}"
 
-    find "${GOPATH}/pkg/mod/github.com/crossplane-contrib/${p}/apis" -name "*.go" | xargs -I {} dirname {} | uniq | xargs -I {} cue get go {} || true
+    find "${GOPATH}/pkg/mod/github.com/crossplane-contrib/${p}/apis" -name "*.go" | xargs -I {} dirname {} | uniq | xargs cue get go
 done
 
 mv cue.mod out
