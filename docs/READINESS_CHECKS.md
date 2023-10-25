@@ -8,7 +8,7 @@ into the xr
 The readiness checks must be defined in the cue template `#readinessChecks`
 
 ```cue
-// Following the v
+// Following the schema
 #matchConditionReadinessCheck: {
         // Type indicates the type of condition you'd like to use.
         // https://pkg.go.dev/github.com/crossplane/crossplane-runtime@v1.13.0/apis/common/v1#ConditionType
