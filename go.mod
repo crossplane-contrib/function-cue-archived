@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
-	k8s.io/api v0.28.2
+	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	sigs.k8s.io/controller-tools v0.13.0
