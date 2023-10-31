@@ -52,7 +52,7 @@ const (
 
 type compiler struct {
 	encoder *encoder
-	data    []map[string]interface{}
+	data    []cueOutputData
 	strData []string
 	outBuf  *bytes.Buffer
 	outFmt  cueOutputFmt
@@ -147,13 +147,24 @@ func (c compiler) Bytes() []byte {
 	return c.outBuf.Bytes()
 }
 
+type cueOutputData struct {
+	// Name is a unique identifier for this entry
+	Name string `json:"name"`
+	// Base is the managed resource output from the provided cue template
+	Base *runtime.RawExtension `json:"base,required"`
+	// ConnectionDetail to propagate to the XR
+	ConnectioDetail connectionDetail `json:"connectionDetail,omitempty"`
+	// ReadinessCheck to propagate to the XR
+	RedinessCheck readinessCheck `json:"readinessCheck,omitempty"`
+}
+
 // Parse parses the compiled cue template output stored in c.outBuf
 // Into an array of map[string]interface{}
 // It is necessary to compile into a map[string]interface{} so that it can be applied into
 // An unstructured.Unstructured{Object: map[string]interface{}}
-func (c *compiler) Parse() ([]map[string]interface{}, error) {
+func (c *compiler) Parse() ([]cueOutputData, error) {
 	var (
-		data map[string]interface{}
+		data cueOutputData
 	)
 
 	// If the current data set is not empty, return that
@@ -161,7 +172,7 @@ func (c *compiler) Parse() ([]map[string]interface{}, error) {
 		return c.data, nil
 	}
 
-	// If there is no data, return an empty data map
+	// If there is no data, return an empty data list
 	if len(c.outBuf.Bytes()) == 0 {
 		return c.data, nil
 	}
@@ -201,7 +212,7 @@ func (c *compiler) Parse() ([]map[string]interface{}, error) {
 
 					// Reset document and data
 					document = ""
-					data = map[string]interface{}{}
+					data = cueOutputData{}
 				} else {
 					document += fmt.Sprintln(line)
 				}
@@ -218,7 +229,7 @@ func (c *compiler) Parse() ([]map[string]interface{}, error) {
 				c.data = append(c.data, data)
 
 				document = ""
-				data = map[string]interface{}{}
+				data = cueOutputData{}
 			} else {
 				return c.data, fmt.Errorf("unknown stream type %s", streamType)
 			}
@@ -254,7 +265,7 @@ var (
 
 type compileOutput struct {
 	// Data is the parsed output data, excluding configuration expressions
-	data           []map[string]interface{}
+	data           []cueOutputData
 	connectionData []connectionDetail
 	readinessData  []readinessCheck
 	string         string
