@@ -129,7 +129,6 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 	log.Debug(fmt.Sprintf("CUE compile output:\n%s", cmpOut.string))
-	log.Debug(fmt.Sprintf("Connection Data: %+v\n", cmpOut.connectionData))
 
 	// Add the compiled data to the desired resources
 	// Based on the input target
@@ -208,7 +207,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 
 	// Get the connection details and propagate them to the xr
-	conn, err := extractConnectionDetails(observed, cmpOut.connectionData)
+	conn, err := extractConnectionDetails(observed, cmpOut.data)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
 		return rsp, nil
@@ -222,7 +221,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// depending on readiness propagation configuration from readinessData
 	// set dxr to ready if all the readiness checks pass
 	log.Debug("Reconciling readiness")
-	err = reconcileReadiness(observed, desired, cmpOut.readinessData)
+	err = reconcileReadiness(observed, desired, cmpOut.data)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed checking readiness: xr is not ready"))
 		return rsp, nil
@@ -273,7 +272,7 @@ type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 
 // matchResources finds and associates the data to the desired resource
 // The length of the passed data should match the total count of desired match data
-func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []map[string]interface{}) (desiredMatch, error) {
+func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []cueOutputData) (desiredMatch, error) {
 	// Looks through the current desired match and matches an object based on the name+kind
 	findDesired := func(desired map[resource.Name]*resource.DesiredComposed, apiVersion, name, kind string) *resource.DesiredComposed {
 		for _, d := range desired {
@@ -291,13 +290,13 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	// this count should match the initial count of the supplied data
 	// otherwise we lost something somewhere
 	for _, d := range data {
-		u := unstructured.Unstructured{Object: d}
+		u := unstructured.Unstructured{Object: d.Base}
 		// PatchDesired
 		if found := findDesired(desired, u.GetAPIVersion(), u.GetName(), u.GetKind()); found != nil {
 			if _, ok := matches[found]; !ok {
-				matches[found] = []map[string]interface{}{d}
+				matches[found] = []map[string]interface{}{d.Base}
 			} else {
-				matches[found] = append(matches[found], d)
+				matches[found] = append(matches[found], d.Base)
 			}
 			count++
 		}
@@ -353,7 +352,7 @@ func (output *successOutput) setSuccessMsgs() {
 
 type addResourcesConf struct {
 	basename  string
-	data      []map[string]interface{}
+	data      []cueOutputData
 	overwrite bool
 }
 
@@ -384,7 +383,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 		name := resource.Name(conf.basename)
 		for _, d := range conf.data {
 			u := unstructured.Unstructured{
-				Object: d,
+				Object: d.Base,
 			}
 
 			// Add the resource name as a suffix to the basename
@@ -394,7 +393,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 			}
 			// If the value exists, merge its existing value with the patches
 			if v, ok := desired[name]; ok {
-				mergedData := merged(d, v)
+				mergedData := merged(d.Base, v)
 				u = unstructured.Unstructured{Object: mergedData}
 			}
 			desired[name] = &resource.DesiredComposed{
