@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
@@ -9,6 +10,7 @@ import (
 	rresource "github.com/crossplane/function-sdk-go/resource"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -67,12 +69,13 @@ const (
 
 // reconcileReadiness compares the observed map names to the desired map names and reconcicles the desired with observed health
 // it then checks the passed readinessChecks against the observed map and propagates this information to the xr
-func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
-	filter := func(ocd rresource.ObservedComposed, data []readinessCheck) []readinessCheck {
+func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []cueOutputData) error {
+	filter := func(ocd rresource.ObservedComposed, data []cueOutputData) []readinessCheck {
 		rc := []readinessCheck{}
 		for _, d := range data {
-			if d.Match.Name == ocd.Resource.GetName() && d.Match.ApiVersion == ocd.Resource.GetAPIVersion() && d.Match.Kind == ocd.Resource.GetKind() {
-				rc = append(rc, d)
+			u := unstructured.Unstructured{Object: d.Base}
+			if u.GetName() == ocd.Resource.GetName() && u.GetAPIVersion() == ocd.Resource.GetAPIVersion() && u.GetKind() == ocd.Resource.GetKind() {
+				rc = append(rc, d.RedinessCheck)
 			}
 		}
 		return rc
