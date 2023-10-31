@@ -152,10 +152,10 @@ type cueOutputData struct {
 	Name string `json:"name"`
 	// Base is the managed resource output from the provided cue template
 	Base map[string]interface{} `json:"base,required"`
-	// ConnectionDetail to propagate to the XR
-	ConnectioDetail connectionDetail `json:"connectionDetail,omitempty"`
+	// ConnectionDetails to propagate to the XR
+	ConnectionDetails []connectionDetail `json:"connectionDetail,omitempty"`
 	// ReadinessCheck to propagate to the XR
-	RedinessCheck readinessCheck `json:"readinessCheck,omitempty"`
+	RedinessChecks []readinessCheck `json:"readinessCheck,omitempty"`
 }
 
 // Parse parses the compiled cue template output stored in c.outBuf
