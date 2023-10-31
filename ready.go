@@ -75,7 +75,7 @@ func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, 
 		for _, d := range data {
 			u := unstructured.Unstructured{Object: d.Base}
 			if u.GetName() == ocd.Resource.GetName() && u.GetAPIVersion() == ocd.Resource.GetAPIVersion() && u.GetKind() == ocd.Resource.GetKind() {
-				rc = append(rc, d.RedinessCheck)
+				rc = append(rc, d.RedinessChecks...)
 			}
 		}
 		return rc

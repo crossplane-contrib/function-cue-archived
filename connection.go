@@ -59,40 +59,40 @@ func extractConnectionDetails(observed map[resource.Name]resource.ObservedCompos
 	out := map[string][]byte{}
 
 	for _, detail := range details {
-		conDetail := detail.ConnectioDetail
+		for _, conDetail := range detail.ConnectionDetails {
+			if err := validateConnectionDetail(conDetail); err != nil {
+				return nil, err
+			}
 
-		if err := validateConnectionDetail(conDetail); err != nil {
-			return nil, err
-		}
+			// Setting from value does not require a match
+			if conDetail.Type == connectionDetailTypeFromValue {
+				out[conDetail.Name] = []byte(*conDetail.Value)
+				continue
+			}
 
-		// Setting from value does not require a match
-		if conDetail.Type == connectionDetailTypeFromValue {
-			out[conDetail.Name] = []byte(*conDetail.Value)
-			continue
-		}
+			u := unstructured.Unstructured{Object: detail.Base}
+			for _, ocd := range observed {
+				if u.GetName() == ocd.Resource.GetName() &&
+					u.GetKind() == ocd.Resource.GetKind() &&
+					u.GetAPIVersion() == ocd.Resource.GetAPIVersion() {
 
-		u := unstructured.Unstructured{Object: detail.Base}
-		for _, ocd := range observed {
-			if u.GetName() == ocd.Resource.GetName() &&
-				u.GetKind() == ocd.Resource.GetKind() &&
-				u.GetAPIVersion() == ocd.Resource.GetAPIVersion() {
+					mcd := managed.ConnectionDetails(ocd.ConnectionDetails)
 
-				mcd := managed.ConnectionDetails(ocd.ConnectionDetails)
-
-				switch conDetail.Type {
-				case connectionDetailTypeFromConnectionSecretKey:
-					if mcd[*conDetail.FromConnectionSecretKey] == nil {
-						// We don't consider this an error because it's possible the
-						// key will still be written at some point in the future.
-						continue
-					}
-					out[conDetail.Name] = mcd[*conDetail.FromConnectionSecretKey]
-				case connectionDetailTypeFromFieldPath:
-					// Note we're checking that the error _is_ nil. If we hit an error
-					// we silently avoid including this connection secret. It's possible
-					// the path will start existing with a valid value in the future.
-					if b, err := fromFieldPath(ocd.Resource, *conDetail.FromFieldPath); err == nil {
-						out[conDetail.Name] = b
+					switch conDetail.Type {
+					case connectionDetailTypeFromConnectionSecretKey:
+						if mcd[*conDetail.FromConnectionSecretKey] == nil {
+							// We don't consider this an error because it's possible the
+							// key will still be written at some point in the future.
+							continue
+						}
+						out[conDetail.Name] = mcd[*conDetail.FromConnectionSecretKey]
+					case connectionDetailTypeFromFieldPath:
+						// Note we're checking that the error _is_ nil. If we hit an error
+						// we silently avoid including this connection secret. It's possible
+						// the path will start existing with a valid value in the future.
+						if b, err := fromFieldPath(ocd.Resource, *conDetail.FromFieldPath); err == nil {
+							out[conDetail.Name] = b
+						}
 					}
 				}
 			}
