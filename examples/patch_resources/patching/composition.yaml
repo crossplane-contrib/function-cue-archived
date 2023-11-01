@@ -26,15 +26,14 @@ spec:
             metadata:
               name: test-bucket
         value: |
-          // Target the bucket by apiVersion+kind+name
-          apiVersion: "nobu.dev/v1"
-          kind: "Bucket"
-          metadata: name: "test-bucket"
-          
-          // Add fields here
-          metadata: annotations: {
-              "nobu.dev/cueified": "true",
-              "nobu.dev/app": "someapp",
+          // Target the bucket by name
+          name: "bucket"
+          base: {
+            // Add fields here
+            metadata: annotations: {
+                "nobu.dev/cueified": "true",
+                "nobu.dev/app": "someapp",
+            }
+            
+            spec: forProvider: policy: "some-bucket-policy"
           }
-          
-          spec: forProvider: policy: "some-bucket-policy"

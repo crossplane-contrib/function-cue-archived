@@ -464,7 +464,7 @@ func setData(data any, path string, o any, overwrite bool) error {
 		case *resource.DesiredComposed:
 			path = strings.TrimPrefix(path, ".")
 
-			// Because we match on gvk+name, there is no need to set this
+			// Currently do not allow overwriting apiVersion kind or name
 			// ignore setting these again because this will conflict with the overwrite settings
 			if path == "apiVersion" || path == "kind" || path == "metadata.name" {
 				return nil

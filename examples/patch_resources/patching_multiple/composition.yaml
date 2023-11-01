@@ -43,45 +43,39 @@ spec:
         value: |
           output: [ 
             {
-              // Target the bucket by apiVersion+kind+name
-              apiVersion: "nobu.dev/v1"
-              kind: "Bucket"
-              metadata: name: "test-bucket"
-              
-              // Add fields here
-              metadata: annotations: {
-                  "nobu.dev/cueified": "true",
-                  "nobu.dev/app": "someapp",
+              // Target the bucket by name
+              name: "bucket"
+              base: {
+                metadata: annotations: {
+                    "nobu.dev/cueified": "true",
+                    "nobu.dev/app": "someapp",
+                }
+                
+                spec: forProvider: policy: "some-bucket-policy"
               }
-              
-              spec: forProvider: policy: "some-bucket-policy"
             }, 
             {
-              // Target the user by apiVersion+kind+name
-              apiVersion: "nobu.dev/v1"
-              kind: "User"
-              metadata: name: "test-user"
-              
-              // Add fields here
-              metadata: annotations: {
-                  "nobu.dev/cueified": "true",
-                  "nobu.dev/app": "someapp",
-              }
+              // Target the user by name
+              name: "iam-user"
+              base: {
+                metadata: annotations: {
+                    "nobu.dev/cueified": "true",
+                    "nobu.dev/app": "someapp",
+                }
 
-              spec: forProvider: name: "somename"
+                spec: forProvider: name: "somename"
+              }
             }, 
             {
-              // Target the bucket by apiVersion+kind+name
-              apiVersion: "nobu.dev/v1"
-              kind: "Role"
-              metadata: name: "test-role"
-              
-              // Add fields here
-              metadata: annotations: {
-                  "nobu.dev/cueified": "true",
-                  "nobu.dev/app": "someapp",
+              // Target the bucket by name
+              name: "iam-role"
+              base: {
+                metadata: annotations: {
+                    "nobu.dev/cueified": "true",
+                    "nobu.dev/app": "someapp",
+                }
+                
+                spec: forProvider: policy: "some-role-policy"
               }
-              
-              spec: forProvider: policy: "some-role-policy"
             },
           ]

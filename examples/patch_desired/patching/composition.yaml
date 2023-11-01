@@ -36,7 +36,6 @@ spec:
               base: {
                 apiVersion: "ec2.aws.upbound.io/v1beta1"
                 kind: "Instance"
-                metadata: name: "someinstance"
                 spec: forProvider: ami: "ami-0d9858aa3c6322f73"
                 spec: forProvider: instanceType: "t2.micro"
                 spec: forProvider: region: "us-east-2"
@@ -54,15 +53,14 @@ spec:
       export:
         target: PatchDesired
         value: |
-          // Target the bucket by apiVersion+kind+name
-          apiVersion: "s3.aws.upbound.io/v1beta1"
-          kind: "Bucket"
-          metadata: name: "test-bucket"
-          
-          // Add fields here
-          metadata: annotations: {
-              "nobu.dev/cueified": "true",
-              "nobu.dev/app": "someapp",
+          // Target the bucket by name
+          name: "test-bucket"
+          base: {
+            // Add fields here
+            metadata: annotations: {
+                "nobu.dev/cueified": "true",
+                "nobu.dev/app": "someapp",
+            }
+            
+            spec: forProvider: policy: "some-bucket-policy"
           }
-          
-          spec: forProvider: policy: "some-bucket-policy"

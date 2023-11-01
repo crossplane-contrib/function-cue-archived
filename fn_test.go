@@ -1952,7 +1952,7 @@ func TestRunFunctionFailures(t *testing.T) {
 			},
 		},
 		"FailMatchingTargets": {
-			reason: "PatchResources targeting should fail if gvk+name do not match",
+			reason: "PatchResources targeting should fail if names do not match",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
