@@ -47,6 +47,6 @@ spec:
             }
           }
           
-          #identification: cluster: spec: forProvider: {
+          #identification: cluster: base: spec: forProvider: {
           	network: "somenetwork"
           }

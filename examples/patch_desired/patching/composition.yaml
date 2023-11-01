@@ -54,7 +54,8 @@ spec:
         target: PatchDesired
         value: |
           // Target the bucket by name
-          name: "test-bucket"
+          // Multiple Objects are prefixed by the CUEInput.name-
+          name: "prime-objects-test-bucket"
           base: {
             // Add fields here
             metadata: annotations: {
