@@ -1599,7 +1599,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"observe-connections": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",

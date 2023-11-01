@@ -60,7 +60,6 @@ Ex `cueCompile()` output schema
 
 #### json
 `single`
-
 ```json
 {
   "name": "my-cluster",
