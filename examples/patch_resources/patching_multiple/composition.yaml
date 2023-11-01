@@ -45,7 +45,7 @@ spec:
             {
               // Target the bucket by name
               name: "bucket"
-              base: {
+              resource: {
                 metadata: annotations: {
                     "nobu.dev/cueified": "true",
                     "nobu.dev/app": "someapp",
@@ -57,7 +57,7 @@ spec:
             {
               // Target the user by name
               name: "iam-user"
-              base: {
+              resource: {
                 metadata: annotations: {
                     "nobu.dev/cueified": "true",
                     "nobu.dev/app": "someapp",
@@ -69,7 +69,7 @@ spec:
             {
               // Target the bucket by name
               name: "iam-role"
-              base: {
+              resource: {
                 metadata: annotations: {
                     "nobu.dev/cueified": "true",
                     "nobu.dev/app": "someapp",

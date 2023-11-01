@@ -20,7 +20,7 @@ spec:
         target: PatchResources
         resources:
         - name: bucket
-          base:
+          resource:
             apiVersion: nobu.dev/v1
             kind: Bucket
             metadata:
@@ -28,7 +28,7 @@ spec:
         value: |
           // Target the bucket by name
           name: "bucket"
-          base: {
+          resource: {
             // Add fields here
             metadata: annotations: {
                 "nobu.dev/cueified": "true",

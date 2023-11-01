@@ -76,7 +76,7 @@ func TestExtractConnectionDetails(t *testing.T) {
 				},
 				details: []cueOutputData{{
 					Name: "test",
-					Base: map[string]interface{}{
+					Resource: map[string]interface{}{
 						"apiVersion": "nobu.dev/v1",
 						"kind":       "test",
 						"metadata": map[string]interface{}{

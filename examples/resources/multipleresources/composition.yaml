@@ -25,35 +25,35 @@ spec:
           output: [
           	{
                 name: "example-cluster"
-                base: {
+                resource: {
           	  	  apiVersion: "nobu.dev/v1"
             	  kind:       "Cluster"
                 }
           	},
           	{
                 name: "example-network"
-                base: {
+                resource: {
           		  apiVersion: "nobu.dev/v1"
           	  	  kind:       "Network"
                 }
           	},
           	{
                 name: "example-memorystore"
-                base: {
+                resource: {
           		  apiVersion: "nobu.dev/v1"
           		  kind:       "Memorystore"
                 }
           	},
           	{
                 name: "example-firewalls"
-                base: {
+                resource: {
           	  	  apiVersion: "nobu.dev/v1"
             	  kind:       "Firewalls"
                 }
           	},
           	{
                 name: "example-nodepools"
-                base: {
+                resource: {
           		  apiVersion: "nobu.dev/v1"
           		  kind:       "Nodepool"
                 }

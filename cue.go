@@ -150,8 +150,8 @@ func (c compiler) Bytes() []byte {
 type cueOutputData struct {
 	// Name is a unique identifier for this entry
 	Name string `json:"name"`
-	// Base is the managed resource output from the provided cue template
-	Base map[string]interface{} `json:"base,required"`
+	// Resource is the managed resource output from the provided cue template
+	Resource map[string]interface{} `json:"resource,required"`
 	// ConnectionDetails to propagate to the XR
 	ConnectionDetails []connectionDetail `json:"connectionDetails,omitempty"`
 	// ReadinessCheck to propagate to the XR

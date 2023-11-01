@@ -7,8 +7,6 @@ package v1beta1
 import (
 	"fmt"
 
-	"cuelang.org/go/cue/errors"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -28,14 +26,27 @@ type CUEInput struct {
 
 func (in CUEInput) Validate() error {
 	if in.Export.Value == "" {
-		return errors.New("value cannot be empty")
+		return field.Required(field.NewPath("export.value"), "cue template cannot be empty")
 	}
 
 	switch in.Export.Target {
 	// Allowed targets
-	case PatchDesired, PatchResources, Resources, XR:
+	case PatchDesired, Resources, XR:
+	case PatchResources:
+		if len(in.Export.Resources) == 0 {
+			return field.Required(field.NewPath("export.Resources"), fmt.Sprintf("%s target requires at least one resource", PatchResources))
+		}
+
+		for i, r := range in.Export.Resources {
+			if r.Name == "" {
+				return field.Required(field.NewPath("export.Resources").Index(i).Child("name"), "name cannot be empty")
+			}
+			if r.Base == nil {
+				return field.Required(field.NewPath("export.Resources").Index(i).Child("base"), "base cannot be empty")
+			}
+		}
 	default:
-		return field.Required(field.NewPath("type"), fmt.Sprintf("invalid target %s", in.Export.Target))
+		return field.Required(field.NewPath("export.target"), fmt.Sprintf("invalid target %s", in.Export.Target))
 	}
 
 	return nil

@@ -20,7 +20,7 @@ spec:
         target: XR
         value: |
           name: "XRPatching"
-          base: {
+          resource: {
             metadata: annotations: {
                 "nobu.dev/cueified": "true",
                 "nobu.dev/app": "someapp",
