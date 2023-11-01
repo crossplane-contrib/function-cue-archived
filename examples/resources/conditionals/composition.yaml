@@ -24,7 +24,7 @@ spec:
           }
           
           name: "TestNodepool"
-          base: {
+          resource: {
             if #ENV["PROVIDER"] == "aws" {
             	apiVersion: "eks.nobu.dev/v1beta"
             }

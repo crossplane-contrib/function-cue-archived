@@ -24,7 +24,7 @@ spec:
         value: |
           #identification: [ID=_]: {
             name: ID
-            base: {
+            resource: {
               apiVersion: "nobu.dev/v1"
               kind:       "XCluster"
               spec: {
@@ -47,6 +47,6 @@ spec:
             }
           }
           
-          #identification: cluster: base: spec: forProvider: {
+          #identification: cluster: resource: spec: forProvider: {
           	network: "somenetwork"
           }

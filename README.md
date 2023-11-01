@@ -48,7 +48,7 @@ Ex `cueCompile()` output schema
 	// see docs/READINESS_CHECKS.md for more details
 	readinessChecks?: [...#readinessCheck]
 	// Resource spec
-	base: {
+	resource: {
 		// Example
 		// apiVersion: "nobu.dev/v1"
 		// kind: "Example"
@@ -63,7 +63,7 @@ Ex `cueCompile()` output schema
 ```json
 {
   "name": "my-cluster",
-  "base": {
+  "resource": {
     "apiVersion": "nobu.dev/v1",
     "kind": "XCluster"
   }
@@ -72,15 +72,15 @@ Ex `cueCompile()` output schema
 
 `multiple` - single json document per line, `-e json.MarshalStream(field)` will produce this format
 ```json
-{"name": "my-cluster", "base": {"apiVersion": "nobu.dev/v1", "kind": "XCluster"}}
-{"name": "my-network", "base": {"apiVersion": "nobu.dev/v1", "kind": "XNetwork"}}
+{"name": "my-cluster", "resource": {"apiVersion": "nobu.dev/v1", "kind": "XCluster"}}
+{"name": "my-network", "resource": {"apiVersion": "nobu.dev/v1", "kind": "XNetwork"}}
 ```
 
 #### yaml
 `single`
 ```yaml
 name: "my-cluster"
-base:
+resource:
   apiVersion: "nobu.dev/v1"
   kind: "XCluster"
 ```
@@ -88,12 +88,12 @@ base:
 `multiple` documents, separated by `---`, `-e yaml.MarshalStream(field)` will produce this format
 ```yaml
 name: "my-cluster"
-base:
+resource:
   apiVersion: "nobu.dev/v1"
   kind: "XCluster"
 ---
 name: "my-network"
-base:
+resource:
   apiVersion: "nobu.dev/v1"
   kind: "XNetwork"
 ...

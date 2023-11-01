@@ -283,9 +283,9 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 		// PatchDesired
 		if found, ok := desired[resource.Name(d.Name)]; ok {
 			if _, ok := matches[found]; !ok {
-				matches[found] = []map[string]interface{}{d.Base}
+				matches[found] = []map[string]interface{}{d.Resource}
 			} else {
-				matches[found] = append(matches[found], d.Base)
+				matches[found] = append(matches[found], d.Resource)
 			}
 			count++
 		}
@@ -312,7 +312,7 @@ func (output *successOutput) setSuccessMsgs() {
 		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d.Base}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
@@ -320,7 +320,7 @@ func (output *successOutput) setSuccessMsgs() {
 		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d.Base}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("updated resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
@@ -328,7 +328,7 @@ func (output *successOutput) setSuccessMsgs() {
 		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d.Base}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
@@ -372,7 +372,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 		for _, d := range conf.data {
 			name := resource.Name(d.Name)
 			u := unstructured.Unstructured{
-				Object: d.Base,
+				Object: d.Resource,
 			}
 
 			// Add the resource name as a suffix to the basename
@@ -382,7 +382,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 			}
 			// If the value exists, merge its existing value with the patches
 			if v, ok := desired[name]; ok {
-				mergedData := merged(d.Base, v)
+				mergedData := merged(d.Resource, v)
 				u = unstructured.Unstructured{Object: mergedData}
 			}
 			desired[name] = &resource.DesiredComposed{
@@ -406,7 +406,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 	case *resource.Composite:
 		// XR
 		for _, d := range conf.data {
-			if err := setData(d.Base, "", o, conf.overwrite); err != nil {
+			if err := setData(d.Resource, "", o, conf.overwrite); err != nil {
 				return errors.Wrap(err, "cannot set data on xr")
 			}
 		}
