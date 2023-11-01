@@ -320,26 +320,26 @@ func (output *successOutput) setSuccessMsgs() {
 	output.msgs = make([]string, output.msgCount)
 	switch output.target {
 	case v1beta1.Resources:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Base}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
 	case v1beta1.PatchDesired:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Base}
 			output.msgs[j] = fmt.Sprintf("updated resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
 	case v1beta1.PatchResources:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Base}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
@@ -380,8 +380,8 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 	case map[resource.Name]*resource.DesiredComposed:
 		// Resources
 		desired := o.(map[resource.Name]*resource.DesiredComposed)
-		name := resource.Name(conf.basename)
 		for _, d := range conf.data {
+			name := resource.Name(d.Name)
 			u := unstructured.Unstructured{
 				Object: d.Base,
 			}
@@ -389,7 +389,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 			// Add the resource name as a suffix to the basename
 			// if there are multiple resources to add
 			if len(conf.data) > 1 {
-				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, u.GetName()))
+				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, d.Name))
 			}
 			// If the value exists, merge its existing value with the patches
 			if v, ok := desired[name]; ok {
@@ -417,7 +417,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 	case *resource.Composite:
 		// XR
 		for _, d := range conf.data {
-			if err := setData(d, "", o, conf.overwrite); err != nil {
+			if err := setData(d.Base, "", o, conf.overwrite); err != nil {
 				return errors.Wrap(err, "cannot set data on xr")
 			}
 		}

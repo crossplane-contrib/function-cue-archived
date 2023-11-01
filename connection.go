@@ -94,6 +94,8 @@ func extractConnectionDetails(observed map[resource.Name]resource.ObservedCompos
 							out[conDetail.Name] = b
 						}
 					}
+
+					break
 				}
 			}
 		}
@@ -139,18 +141,10 @@ func validateConnectionDetail(cd connectionDetail) *field.Error {
 			return field.Required(field.NewPath("value"), "value connection detail requires a value")
 		}
 	case connectionDetailTypeFromConnectionSecretKey:
-		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
-			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
-		}
-
 		if cd.FromConnectionSecretKey == nil {
 			return field.Required(field.NewPath("fromConnectionSecretKey"), "from connection secret key connection detail requires a key")
 		}
 	case connectionDetailTypeFromFieldPath:
-		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
-			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
-		}
-
 		if cd.FromFieldPath == nil {
 			return field.Required(field.NewPath("fromFieldPath"), "from field path connection detail requires a field path")
 		}
