@@ -69,7 +69,6 @@ func extractConnectionDetails(observed map[resource.Name]resource.ObservedCompos
 				continue
 			}
 
-			// u := unstructured.Unstructured{Object: detail.Base}
 			ocd, ok := observed[resource.Name(detail.Name)]
 			if ok {
 				mcd := managed.ConnectionDetails(ocd.ConnectionDetails)
