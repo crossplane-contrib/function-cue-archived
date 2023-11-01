@@ -153,9 +153,9 @@ type cueOutputData struct {
 	// Base is the managed resource output from the provided cue template
 	Base map[string]interface{} `json:"base,required"`
 	// ConnectionDetails to propagate to the XR
-	ConnectionDetails []connectionDetail `json:"connectionDetail,omitempty"`
+	ConnectionDetails []connectionDetail `json:"connectionDetails,omitempty"`
 	// ReadinessCheck to propagate to the XR
-	RedinessChecks []readinessCheck `json:"readinessCheck,omitempty"`
+	RedinessChecks []readinessCheck `json:"readinessChecks,omitempty"`
 }
 
 // Parse parses the compiled cue template output stored in c.outBuf
@@ -281,21 +281,13 @@ func cueCompile(out cueOutputFmt, input v1beta1.CUEInput, opts compileOpts) (com
 	if err != nil {
 		return output, fmt.Errorf("failed building expression(s): %w", err)
 	}
-	if len(exprs) != len(input.Export.Options.Expressions) {
-		return output, fmt.Errorf("number of expressions %d!=%d expressions input", len(exprs), len(input.Export.Options.Expressions))
-	}
 
 	// Run compilation per expression
 	// Output is appended to outputData
 	// Compile string output is added to cmpStr
 	// connection details is output to connectionData
 	for _, expr := range exprs {
-		var (
-			err error
-			c   *compiler
-		)
-
-		c, err = newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
+		c, err := newCompiler(input.Export.Value, inputCUE, out, expr, opts.tags)
 		if err != nil {
 			return output, fmt.Errorf("failed creating cue compiler: %w", err)
 		}
