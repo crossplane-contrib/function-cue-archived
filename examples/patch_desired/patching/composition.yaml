@@ -24,18 +24,23 @@ spec:
         value: |
           output: [
             {
-              apiVersion: "s3.aws.upbound.io/v1beta1"
-              kind: "Bucket"
-              metadata: name: "test-bucket"
-              spec: forProvider: region: "us-east-2"
+              name: "test-bucket"
+              base: {
+                apiVersion: "s3.aws.upbound.io/v1beta1"
+                kind: "Bucket"
+                spec: forProvider: region: "us-east-2"
+              }
             },
             {
-              apiVersion: "ec2.aws.upbound.io/v1beta1"
-              kind: "Instance"
-              metadata: name: "someinstance"
-              spec: forProvider: ami: "ami-0d9858aa3c6322f73"
-              spec: forProvider: instanceType: "t2.micro"
-              spec: forProvider: region: "us-east-2"
+              name: "someinstance"
+              base: {
+                apiVersion: "ec2.aws.upbound.io/v1beta1"
+                kind: "Instance"
+                metadata: name: "someinstance"
+                spec: forProvider: ami: "ami-0d9858aa3c6322f73"
+                spec: forProvider: instanceType: "t2.micro"
+                spec: forProvider: region: "us-east-2"
+              }
             }
           ]
   - step: patch-storage-bucket

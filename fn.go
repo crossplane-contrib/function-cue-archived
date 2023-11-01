@@ -177,7 +177,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 				return rsp, nil
 			}
 
-			desired[resource.Name(tmp.Resource.GetName())] = tmp
+			desired[resource.Name(r.Name)] = tmp
 		}
 
 		// Match the data to the desired resources
@@ -273,16 +273,6 @@ type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 // matchResources finds and associates the data to the desired resource
 // The length of the passed data should match the total count of desired match data
 func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []cueOutputData) (desiredMatch, error) {
-	// Looks through the current desired match and matches an object based on the name+kind
-	findDesired := func(desired map[resource.Name]*resource.DesiredComposed, apiVersion, name, kind string) *resource.DesiredComposed {
-		for _, d := range desired {
-			if d.Resource.GetName() == name && d.Resource.GetKind() == kind && d.Resource.GetAPIVersion() == apiVersion {
-				return d
-			}
-		}
-		return nil
-	}
-
 	// Iterate over the data patches and match them to desired resources
 	matches := make(desiredMatch)
 	count := 0
@@ -290,9 +280,8 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	// this count should match the initial count of the supplied data
 	// otherwise we lost something somewhere
 	for _, d := range data {
-		u := unstructured.Unstructured{Object: d.Base}
 		// PatchDesired
-		if found := findDesired(desired, u.GetAPIVersion(), u.GetName(), u.GetKind()); found != nil {
+		if found, ok := desired[resource.Name(d.Name)]; ok {
 			if _, ok := matches[found]; !ok {
 				matches[found] = []map[string]interface{}{d.Base}
 			} else {
