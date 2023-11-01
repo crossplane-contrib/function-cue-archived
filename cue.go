@@ -416,10 +416,11 @@ func buildExprs(input v1beta1.CUEInput) (exprs []*ast.Expr, err error) {
 		}
 	}
 
-	// If there were no expressions built, add a nil default expression to the front
+	// If there were no expressions built, set exprs to a nil expr set
+	// This implies the cueCompilation will run without any expression
 	if len(exprs) == 0 {
 		// add a nil expression to the beginning
-		exprs = append([]*ast.Expr{nil}, exprs...)
+		exprs = []*ast.Expr{nil}
 	}
 
 	return
