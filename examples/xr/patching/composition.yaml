@@ -19,9 +19,12 @@ spec:
       export:
         target: XR
         value: |
-          metadata: annotations: {
-              "nobu.dev/cueified": "true",
-              "nobu.dev/app": "someapp",
+          name: "XRPatching"
+          base: {
+            metadata: annotations: {
+                "nobu.dev/cueified": "true",
+                "nobu.dev/app": "someapp",
+            }
+            
+            spec: forProvider: network: "somenetwork"
           }
-          
-          spec: forProvider: network: "somenetwork"
