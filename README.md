@@ -33,48 +33,70 @@ See [examples folder](examples)
 The compilation output of the `CUEInput.Export.Value` **must** be in `YAML` or `JSON` documents, or it will fail parsing.
 
 - Each document produced should be a valid crossplane resource `xr` or `mr`
-- Each document must have an `apiVersion`, `kind`, and `metadata.name`
+- Each document must have an `apiVersion`, `kind`
 
-Ex `cueCompile()` output
+Ex `cueCompile()` output schema
+
+```cue
+#outputSchema: {
+	// Name of your resource
+	name: string
+	// Optional connection details
+	// see docs/CONNECTION_DETAILS.md for more details
+	connectionDetails?: [...#connectionDetail]
+	// Optional readiness checks
+	// see docs/READINESS_CHECKS.md for more details
+	readinessChecks?: [...#readinessCheck]
+	// Resource spec
+	base: {
+		// Example
+		// apiVersion: "nobu.dev/v1"
+		// kind: "Example"
+		//
+		// etc...
+	}
+}
+```
 
 #### json
 `single`
+
 ```json
 {
-  "apiVersion": "nobu.dev/v1",
-  "kind": "XCluster",
-  "metadata": {
-    "name": "my-cluster"
+  "name": "my-cluster",
+  "base": {
+    "apiVersion": "nobu.dev/v1",
+    "kind": "XCluster"
   }
 }
 ```
 
 `multiple` - single json document per line, `-e json.MarshalStream(field)` will produce this format
 ```json
-{"apiVersion": "nobu.dev/v1", "kind": "XCluster", "metadata": {"name": "my-cluster"}}
-{"apiVersion": "nobu.dev/v1", "kind": "XNetwork", "metadata": {"name": "my-network"}}
+{"name": "my-cluster", "base": {"apiVersion": "nobu.dev/v1", "kind": "XCluster"}}
+{"name": "my-network", "base": {"apiVersion": "nobu.dev/v1", "kind": "XNetwork"}}
 ```
 
 #### yaml
 `single`
 ```yaml
-apiVersion: "nobu.dev/v1"
-kind: "XCluster"
-metadata:
-  name: "my-cluster"
+name: "my-cluster"
+base:
+  apiVersion: "nobu.dev/v1"
+  kind: "XCluster"
 ```
 
 `multiple` documents, separated by `---`, `-e yaml.MarshalStream(field)` will produce this format
 ```yaml
-apiVersion: "nobu.dev/v1"
-kind: "XCluster"
-metadata:
-  name: "my-cluster"
+name: "my-cluster"
+base:
+  apiVersion: "nobu.dev/v1"
+  kind: "XCluster"
 ---
-apiVersion: "nobu.dev/v1"
-kind: "XNetwork"
-metadata:
-  name: "my-network"
+name: "my-network"
+base:
+  apiVersion: "nobu.dev/v1"
+  kind: "XNetwork"
 ...
 ```
 
@@ -98,7 +120,7 @@ kind: Function
 metadata:
   name: function-cue
 spec:
-  package: mitsuwa/function-cue:v0.1.1
+  package: mitsuwa/function-cue:v0.1.2
 ```
 
 ## Debugging
