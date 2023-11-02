@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
@@ -67,12 +68,12 @@ const (
 
 // reconcileReadiness compares the observed map names to the desired map names and reconcicles the desired with observed health
 // it then checks the passed readinessChecks against the observed map and propagates this information to the xr
-func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []readinessCheck) error {
-	filter := func(ocd rresource.ObservedComposed, data []readinessCheck) []readinessCheck {
+func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, desired map[rresource.Name]*rresource.DesiredComposed, data []cueOutputData) error {
+	filter := func(name string, data []cueOutputData) []readinessCheck {
 		rc := []readinessCheck{}
 		for _, d := range data {
-			if d.Match.Name == ocd.Resource.GetName() && d.Match.ApiVersion == ocd.Resource.GetAPIVersion() && d.Match.Kind == ocd.Resource.GetKind() {
-				rc = append(rc, d)
+			if d.Name == name {
+				rc = append(rc, d.RedinessChecks...)
 			}
 		}
 		return rc
@@ -84,7 +85,7 @@ func reconcileReadiness(observed map[rresource.Name]rresource.ObservedComposed, 
 			// If the desired map doesn't have the observed name, skip readiness checks
 			continue
 		}
-		rc := filter(ocd, data)
+		rc := filter(string(name), data)
 
 		ready, err := IsReady(context.Background(), ocd.Resource, rc...)
 		if err != nil {

@@ -23,28 +23,30 @@ spec:
           - "#identification.cluster"
         value: |
           #identification: [ID=_]: {
-          	apiVersion: "nobu.dev/v1"
-          	kind:       "XCluster"
-          	metadata: name: ID
-          	spec: {
-          		forProvider: {
-          			network: string
-          			masterAuthorizedNetworksConfig: {
-          				cidrBlocks: [
-          					{
-          						cidrBlock: "10.0.0.0/18"
-          						name:      "somevpc"
-          					},
-          					{
-          						cidrBlock: "1.0.0.0/32"
-          						name:      "vpn"
-          					},
-          				]
-          			}
-          		}
-          	}
+            name: ID
+            resource: {
+              apiVersion: "nobu.dev/v1"
+              kind:       "XCluster"
+              spec: {
+              	forProvider: {
+              		network: string
+              		masterAuthorizedNetworksConfig: {
+              			cidrBlocks: [
+              				{
+              					cidrBlock: "10.0.0.0/18"
+              					name:      "somevpc"
+              				},
+              				{
+              					cidrBlock: "1.0.0.0/32"
+              					name:      "vpn"
+              				},
+              			]
+              		}
+              	}
+              }
+            }
           }
           
-          #identification: cluster: spec: forProvider: {
+          #identification: cluster: resource: spec: forProvider: {
           	network: "somenetwork"
           }

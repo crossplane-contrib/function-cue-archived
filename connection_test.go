@@ -19,7 +19,7 @@ func TestExtractConnectionDetails(t *testing.T) {
 	type args struct {
 		obs     map[rresource.Name]rresource.ObservedComposed
 		data    managed.ConnectionDetails
-		details []connectionDetail
+		details []cueOutputData
 	}
 	type want struct {
 		conn managed.ConnectionDetails
@@ -34,12 +34,14 @@ func TestExtractConnectionDetails(t *testing.T) {
 		"MissingNameError": {
 			reason: "We should return an error if a connection detail is missing a name.",
 			args: args{
-				details: []connectionDetail{
-					{
-						// A nameless connection detail.
-						Type: connectionDetailTypeFromValue,
+				details: []cueOutputData{{
+					ConnectionDetails: []connectionDetail{
+						{
+							// A nameless connection detail.
+							Type: connectionDetailTypeFromValue,
+						},
 					},
-				},
+				}},
 			},
 			want: want{
 				err: &field.Error{
@@ -72,43 +74,38 @@ func TestExtractConnectionDetails(t *testing.T) {
 						},
 					},
 				},
-				details: []connectionDetail{
-					{
-						Match: match{
-							ApiVersion: "nobu.dev/v1",
-							Kind:       "test",
-							Name:       "test",
+				details: []cueOutputData{{
+					Name: "test",
+					Resource: map[string]interface{}{
+						"apiVersion": "nobu.dev/v1",
+						"kind":       "test",
+						"metadata": map[string]interface{}{
+							"name": "test",
 						},
-						Type:                    connectionDetailTypeFromConnectionSecretKey,
-						Name:                    "convfoo",
-						FromConnectionSecretKey: pointer.String("foo"),
 					},
-					{
-						Type:  connectionDetailTypeFromValue,
-						Name:  "fixed",
-						Value: pointer.String("value"),
-					},
-					{
-						Match: match{
-							ApiVersion: "nobu.dev/v1",
-							Kind:       "test",
-							Name:       "test",
+					ConnectionDetails: []connectionDetail{
+						{
+							Type:                    connectionDetailTypeFromConnectionSecretKey,
+							Name:                    "convfoo",
+							FromConnectionSecretKey: pointer.String("foo"),
 						},
-						Type:          connectionDetailTypeFromFieldPath,
-						Name:          "name",
-						FromFieldPath: pointer.String("metadata.name"),
-					},
-					{
-						Match: match{
-							ApiVersion: "nobu.dev/v1",
-							Kind:       "test",
-							Name:       "test",
+						{
+							Type:  connectionDetailTypeFromValue,
+							Name:  "fixed",
+							Value: pointer.String("value"),
 						},
-						Type:          connectionDetailTypeFromFieldPath,
-						Name:          "generation",
-						FromFieldPath: pointer.String("metadata.generation"),
+						{
+							Type:          connectionDetailTypeFromFieldPath,
+							Name:          "name",
+							FromFieldPath: pointer.String("metadata.name"),
+						},
+						{
+							Type:          connectionDetailTypeFromFieldPath,
+							Name:          "generation",
+							FromFieldPath: pointer.String("metadata.generation"),
+						},
 					},
-				},
+				}},
 			},
 			want: want{
 				conn: managed.ConnectionDetails{
@@ -120,6 +117,7 @@ func TestExtractConnectionDetails(t *testing.T) {
 			},
 		},
 	}
+
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			conn, err := extractConnectionDetails(tc.args.obs, tc.args.details)

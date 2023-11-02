@@ -54,41 +54,39 @@ type connectionDetail struct {
 
 // extractConnectionDetails extracts XR connection details from the supplied observed map
 // matches against connectionDetails.Match
-func extractConnectionDetails(observed map[resource.Name]resource.ObservedComposed, conDetails []connectionDetail) (managed.ConnectionDetails, error) {
+func extractConnectionDetails(observed map[resource.Name]resource.ObservedComposed, details []cueOutputData) (managed.ConnectionDetails, error) {
 	out := map[string][]byte{}
 
-	for _, detail := range conDetails {
-		if err := validateConnectionDetail(detail); err != nil {
-			return nil, err
-		}
+	for _, detail := range details {
+		for _, conDetail := range detail.ConnectionDetails {
+			if err := validateConnectionDetail(conDetail); err != nil {
+				return nil, err
+			}
 
-		// Setting from value does not require a match
-		if detail.Type == connectionDetailTypeFromValue {
-			out[detail.Name] = []byte(*detail.Value)
-			continue
-		}
+			// Setting from value does not require a match
+			if conDetail.Type == connectionDetailTypeFromValue {
+				out[conDetail.Name] = []byte(*conDetail.Value)
+				continue
+			}
 
-		for _, ocd := range observed {
-			if detail.Match.Name == ocd.Resource.GetName() &&
-				detail.Match.Kind == ocd.Resource.GetKind() &&
-				detail.Match.ApiVersion == ocd.Resource.GetAPIVersion() {
-
+			ocd, ok := observed[resource.Name(detail.Name)]
+			if ok {
 				mcd := managed.ConnectionDetails(ocd.ConnectionDetails)
 
-				switch detail.Type {
+				switch conDetail.Type {
 				case connectionDetailTypeFromConnectionSecretKey:
-					if mcd[*detail.FromConnectionSecretKey] == nil {
+					if mcd[*conDetail.FromConnectionSecretKey] == nil {
 						// We don't consider this an error because it's possible the
 						// key will still be written at some point in the future.
 						continue
 					}
-					out[detail.Name] = mcd[*detail.FromConnectionSecretKey]
+					out[conDetail.Name] = mcd[*conDetail.FromConnectionSecretKey]
 				case connectionDetailTypeFromFieldPath:
 					// Note we're checking that the error _is_ nil. If we hit an error
 					// we silently avoid including this connection secret. It's possible
 					// the path will start existing with a valid value in the future.
-					if b, err := fromFieldPath(ocd.Resource, *detail.FromFieldPath); err == nil {
-						out[detail.Name] = b
+					if b, err := fromFieldPath(ocd.Resource, *conDetail.FromFieldPath); err == nil {
+						out[conDetail.Name] = b
 					}
 				}
 			}
@@ -135,18 +133,10 @@ func validateConnectionDetail(cd connectionDetail) *field.Error {
 			return field.Required(field.NewPath("value"), "value connection detail requires a value")
 		}
 	case connectionDetailTypeFromConnectionSecretKey:
-		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
-			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
-		}
-
 		if cd.FromConnectionSecretKey == nil {
 			return field.Required(field.NewPath("fromConnectionSecretKey"), "from connection secret key connection detail requires a key")
 		}
 	case connectionDetailTypeFromFieldPath:
-		if cd.Match.Name == "" || cd.Match.Kind == "" || cd.Match.ApiVersion == "" {
-			return field.Required(field.NewPath("match"), "from connection secret key connection detail requires a gvk+name match")
-		}
-
 		if cd.FromFieldPath == nil {
 			return field.Required(field.NewPath("fromFieldPath"), "from field path connection detail requires a field path")
 		}

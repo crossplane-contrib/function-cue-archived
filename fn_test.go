@@ -47,7 +47,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "Resources",
-							"value": "apiVersion: \"example.org/v1\"\nkind: \"Generated\"\nmetadata: name: \"basic\""
+							"value": "name: \"basic\"\nresource: {\n\tapiVersion: \"example.org/v1\"\n\tkind:       \"Generated\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -63,7 +63,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"basic:Generated\"",
+							Message:  "created resource \":Generated\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -72,7 +72,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						Resources: map[string]*fnv1beta1.Resource{
 							"basic": {
-								Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"Generated","metadata":{"name":"basic"}}`),
+								Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"Generated"}`),
 							},
 						},
 					},
@@ -91,7 +91,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "Resources",
-							"value": "let #ENV = {\n\tPROVIDER: \"aws\"\n}\n\nif #ENV[\"PROVIDER\"] == \"aws\" {\n\tapiVersion: \"eks.nobu.dev/v1beta\"\n}\nif #ENV[\"PROVIDER\"] == \"gcp\" {\n\tapiVersion: \"gke.nobu.dev/v1beta1\"\n}\n\nkind: \"XNodepool\"\nmetadata: name: \"TestNodepool\"\nspec: parameters: {\n\tautoscaling: [{\n\t\tmaxNodeCount: 1\n\t\tminNodeCount: 1\n\t}]\n\tclusterName: \"example1\"\n\tif #ENV[\"LABELS\"] != _|_ {\n\t\tnodeLabels: #ENV[\"LABELS\"]\n\t}\n\tregion: \"us-east-2\"\n}\n"
+							"value": " let #ENV = {\n\tPROVIDER: \"aws\"\n}\n\nname: \"conditional\"\nresource: {\n\tif #ENV[\"PROVIDER\"] == \"aws\" {\n\t\tapiVersion: \"eks.nobu.dev/v1beta\"\n\t}\n\tif #ENV[\"PROVIDER\"] == \"gcp\" {\n\t\tapiVersion: \"gke.nobu.dev/v1beta1\"\n\t}\n\n\tkind: \"XNodepool\"\n\tspec: parameters: {\n\t\tautoscaling: [{\n\t\t\tmaxNodeCount: 1\n\t\t\tminNodeCount: 1\n\t\t}]\n\t\tclusterName: \"example1\"\n\t\tif #ENV[\"LABELS\"] != _|_ {\n\t\t\tnodeLabels: #ENV[\"LABELS\"]\n\t\t}\n\t\tregion: \"us-east-2\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -107,7 +107,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"TestNodepool:XNodepool\"",
+							Message:  "created resource \":XNodepool\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -119,9 +119,6 @@ func TestRunFunction(t *testing.T) {
 								Resource: resource.MustStructJSON(`{
 								    "apiVersion": "eks.nobu.dev/v1beta",
 								    "kind": "XNodepool",
-								    "metadata": {
-								        "name": "TestNodepool"
-								    },
 								    "spec": {
 								        "parameters": {
 								            "autoscaling": [
@@ -153,7 +150,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "Resources",
-							"value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n#deployment.echoserver\n"
+							"value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n\nname: \"identifier\"\nresource: #deployment.echoserver\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -177,7 +174,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"identification": {
+							"identifier": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "apps/v1",
 									"kind": "Deployment",
@@ -215,7 +212,7 @@ func TestRunFunction(t *testing.T) {
 			},
 		},
 		// Expressions allow for multiple document generations
-		"YAMLStreamExpressions": {
+		"JSONStreamExpressions": {
 			reason: "CUE Expressions should work",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
@@ -232,7 +229,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "output: [\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t},\n]\n"
+							"value": "output: [\n\t{\n\t\tname: \"example-cluster\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Cluster\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-nodepool\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Nodepool\"\n\t\t}\n\t},\n]\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -248,11 +245,11 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-cluster:Cluster\"",
+							Message:  "created resource \":Cluster\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-nodepool:Nodepool\"",
+							Message:  "created resource \":Nodepool\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -263,19 +260,13 @@ func TestRunFunction(t *testing.T) {
 							"expression-example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Cluster",
-									"metadata": {
-									    "name": "example-cluster"
-									}
+									"kind": "Cluster"
 								}`),
 							},
 							"expression-example-nodepool": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Nodepool",
-									"metadata": {
-									    "name": "example-nodepool"
-									}
+									"kind": "Nodepool"
 								}`),
 							},
 						},
@@ -283,7 +274,7 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
-		"JSONStreamExpressions": {
+		"YAMLStreamExpressions": {
 			reason: "CUE Expressions should work",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
@@ -300,7 +291,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "output: [\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t},\n]\n"
+							"value": "output: [\n\t{\n\t\tname: \"example-cluster\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Cluster\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-nodepool\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Nodepool\"\n\t\t}\n\t},\n]\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -316,11 +307,11 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-cluster:Cluster\"",
+							Message:  "created resource \":Cluster\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-nodepool:Nodepool\"",
+							Message:  "created resource \":Nodepool\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -331,19 +322,13 @@ func TestRunFunction(t *testing.T) {
 							"expression-example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Cluster",
-									"metadata": {
-									    "name": "example-cluster"
-									}
+									"kind": "Cluster"
 								}`),
 							},
 							"expression-example-nodepool": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Nodepool",
-									"metadata": {
-									    "name": "example-nodepool"
-									}
+									"kind": "Nodepool"
 								}`),
 							},
 						},
@@ -370,7 +355,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "cluster: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: \"example-cluster\"\n}\nnodepool: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Nodepool\"\n\tmetadata: name: \"example-nodepool\"\n}\nvpc: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"Vpc\"\n\tmetadata: name: \"example-vpc\"\n}\n"
+							"value": "cluster: {\n\tname: \"example-cluster\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t}\n}\nnodepool: {\n\tname: \"example-nodepool\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t}\n}\nvpc: {\n\tname: \"example-vpc\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Vpc\"\n\t\tmetadata: name: \"example-vpc\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -407,7 +392,7 @@ func TestRunFunction(t *testing.T) {
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Cluster",
 									"metadata": {
-									    "name": "example-cluster"
+										"name": "example-cluster"
 									}
 								}`),
 							},
@@ -416,7 +401,7 @@ func TestRunFunction(t *testing.T) {
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Nodepool",
 									"metadata": {
-									    "name": "example-nodepool"
+										"name": "example-nodepool"
 									}
 								}`),
 							},
@@ -425,7 +410,7 @@ func TestRunFunction(t *testing.T) {
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Vpc",
 									"metadata": {
-									    "name": "example-vpc"
+										"name": "example-vpc"
 									}
 								}`),
 							},
@@ -451,7 +436,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "output: [\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Vpc\"\n\t\tmetadata: name: \"example-vpc\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Rds\"\n\t\tmetadata: name: \"example-rds\"\n\t},\n\t{\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Subnet\"\n\t\tmetadata: name: \"example-subnet\"\n\t},\n]\n"
+							"value": "output: [\n\t{\n\t\tname: \"example-cluster\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Cluster\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-nodepool\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Nodepool\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-vpc\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Vpc\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-rds\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Rds\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-subnet\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Subnet\"\n\t\t}\n\t},\n]\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -467,23 +452,23 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-cluster:Cluster\"",
+							Message:  "created resource \":Cluster\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-nodepool:Nodepool\"",
+							Message:  "created resource \":Nodepool\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-rds:Rds\"",
+							Message:  "created resource \":Rds\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-subnet:Subnet\"",
+							Message:  "created resource \":Subnet\"",
 						},
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example-vpc:Vpc\"",
+							Message:  "created resource \":Vpc\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -494,46 +479,31 @@ func TestRunFunction(t *testing.T) {
 							"expression-example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Cluster",
-									"metadata": {
-									    "name": "example-cluster"
-									}
+									"kind": "Cluster"
 								}`),
 							},
 							"expression-example-nodepool": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Nodepool",
-									"metadata": {
-									    "name": "example-nodepool"
-									}
+									"kind": "Nodepool"
 								}`),
 							},
 							"expression-example-vpc": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Vpc",
-									"metadata": {
-									    "name": "example-vpc"
-									}
+									"kind": "Vpc"
 								}`),
 							},
 							"expression-example-rds": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Rds",
-									"metadata": {
-									    "name": "example-rds"
-									}
+									"kind": "Rds"
 								}`),
 							},
 							"expression-example-subnet": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "Subnet",
-									"metadata": {
-									    "name": "example-subnet"
-									}
+									"kind": "Subnet"
 								}`),
 							},
 						},
@@ -558,7 +528,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n"
+							"value": "#deployment: [ID=_]: {\n\tname: ID\n\tresource: {\n\t\tapiVersion: \"apps/v1\"\n\t\tkind:       \"Deployment\"\n\t\tspec: {\n\t\t\treplicas: *1 | int\n\t\t\ttemplate: {\n\t\t\t\tmetadata: labels: {\n\t\t\t\t\tapp:       ID\n\t\t\t\t\tdomain:    \"prod\"\n\t\t\t\t\tcomponent: string\n\t\t\t\t}\n\t\t\t\tspec: containers: [{name: ID}]\n\t\t\t}\n\t\t}\n\t}\n}\n\n#deployment: echoserver: resource: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -574,7 +544,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"echoserver:Deployment\"",
+							Message:  "created resource \":Deployment\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -582,13 +552,10 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"expressidentification": {
+							"echoserver": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "apps/v1",
 									"kind": "Deployment",
-									"metadata": {
-									    "name": "echoserver"
-									},
 									"spec": {
 									    "replicas": 1,
 									    "template": {
@@ -639,7 +606,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "#env: string @tag(env)\n\napiVersion: \"eks.nobu.dev/v1\"\nkind:       \"Cluster\"\nmetadata: {\n\tannotations: {\n\t\tregion: \"us-east-1\"\n\t}\n\tname: \"example\"\n\tlabels: {\n\t\tapp:            \"example\"\n\t\tenv:            #env\n\t\tclassification: \"controlplane\"\n\t}\n}\n"
+							"value": "#env: string @tag(env)\n\nname: \"example\"\nresource: {\n\tapiVersion: \"eks.nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: {\n\t\tannotations: {\n\t\t\tregion: \"us-east-1\"\n\t\t}\n\t\tlabels: {\n\t\t\tapp:            \"example\"\n\t\t\tenv:            #env\n\t\t\tclassification: \"controlplane\"\n\t\t}\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -660,7 +627,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example:Cluster\"",
+							Message:  "created resource \":Cluster\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -668,7 +635,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod"}}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"injection": {
+							"example": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "eks.nobu.dev/v1",
 									"kind": "Cluster",
@@ -676,7 +643,6 @@ func TestRunFunction(t *testing.T) {
 										"annotations": {
 											"region": "us-east-1"
 										},
-										"name": "example",
 										"labels": {
 											"app": "example",
 											"env": "prod",
@@ -717,7 +683,7 @@ func TestRunFunction(t *testing.T) {
 								]
 							},
 							"target": "Resources",
-							"value": "#env:    string @tag(env,short=development|staging|production)\n#region: string @tag(region)\n\ncluster: [ID=_]: {\n\tapiVersion: \"eks.nobu.dev/v1\"\n\tkind:       \"Cluster\"\n\tmetadata: name: ID\n\tmetadata: labels: {\n\t\tapp:            ID\n\t\tenv:            #env\n\t\tclassification: string\n\t}\n\t// we always have one namesake container\n}\ncluster: example: metadata: {\n\tannotations: {\n\t\t\"region\": #region\n\t}\n\tlabels: {\n\t\t\"classification\": \"controlplane\"\n\t}\n}\n"
+							"value": "#env:    string @tag(env,short=development|staging|production)\n#region: string @tag(region)\n\ncluster: [ID=_]: {\n\tname: ID\n\tresource: {\n\t\tapiVersion: \"eks.nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: labels: {\n\t\t\tapp:            ID\n\t\t\tenv:            #env\n\t\t\tclassification: string\n\t\t}\n\t\t// we always have one namesake container\n\t}\n}\ncluster: example: resource: metadata: {\n\tannotations: {\n\t\t\"region\": #region\n\t}\n\tlabels: {\n\t\t\"classification\": \"controlplane\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -738,7 +704,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "created resource \"example:Cluster\"",
+							Message:  "created resource \":Cluster\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -746,7 +712,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR","spec":{"env":"prod", "region":"us-east-1"}}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"injectionexpression": {
+							"example": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "eks.nobu.dev/v1",
 									"kind": "Cluster",
@@ -754,7 +720,6 @@ func TestRunFunction(t *testing.T) {
 										"annotations": {
 											"region": "us-east-1"
 										},
-										"name": "example",
 										"labels": {
 											"app": "example",
 											"env": "prod",
@@ -780,7 +745,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "XR",
-							"value": "metadata: name: \"example\"\nmetadata: labels: {\n\tapp:            \"example\"\n\tenv:            \"prod\"\n\tclassification: \"controlplane\"\n}\n"
+							"value": "name: \"example\"\nresource: {\n\tmetadata: name: \"example\"\n\tmetadata: labels: {\n\t\tapp:            \"example\"\n\t\tenv:            \"prod\"\n\t\tclassification: \"controlplane\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -837,7 +802,7 @@ func TestRunFunction(t *testing.T) {
 						"export": {
 							"target": "XR",
 							"overwrite": true,
-							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
+							"value": "name: \"patch-example\"\nresource: {\n\tkind: \"Overwrite\"\n\tmetadata: name: \"example\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -882,7 +847,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "PatchDesired",
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"patch-existing\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -914,7 +879,7 @@ func TestRunFunction(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_NORMAL,
-							Message:  "updated resource \"testname:findme\"",
+							Message:  "updated resource \":findme\"",
 						},
 					},
 					Desired: &fnv1beta1.State{
@@ -954,7 +919,7 @@ func TestRunFunction(t *testing.T) {
 						},
 						"export": {
 							"target": "PatchDesired",
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"patch-existing\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1092,7 +1057,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1117,7 +1082,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1165,7 +1130,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/newone\": \"hello\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tmetadata: annotations: \"kubernetes.io/newone\": \"hello\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1190,7 +1155,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1238,7 +1203,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1263,7 +1228,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1310,7 +1275,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: labels: \"additional\": \"news\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tmetadata: labels: \"additional\": \"news\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1335,7 +1300,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1354,7 +1319,6 @@ func TestRunFunction(t *testing.T) {
 				},
 			},
 		},
-
 		"PatchResourcesMultiple": {
 			reason: "PatchResources should be able to patch multiple resources",
 			args: args{
@@ -1404,7 +1368,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "output: [ \n  {\n    // Target the bucket by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"Bucket\"\n    metadata: name: \"test-bucket\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n    \n    spec: forProvider: policy: \"some-bucket-policy\"\n  }, \n  {\n    // Target the user by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"User\"\n    metadata: name: \"test-user\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n\n    spec: forProvider: name: \"somename\"\n  }, \n  {\n    // Target the bucket by apiVersion+kind+name\n    apiVersion: \"nobu.dev/v1\"\n    kind: \"Role\"\n    metadata: name: \"test-role\"\n    \n    // Add fields here\n    metadata: annotations: {\n        \"nobu.dev/cueified\": \"true\",\n        \"nobu.dev/app\": \"someapp\",\n    }\n    \n    spec: forProvider: policy: \"some-role-policy\"\n  },\n]\n\n"
+							"value": "output: [\n\t{\n\t\tname: \"bucket\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Bucket\"\n\t\t\tmetadata: name: \"test-bucket\"\n\n\t\t\t// Add fields here\n\t\t\tmetadata: annotations: {\n\t\t\t\t\"nobu.dev/cueified\": \"true\"\n\t\t\t\t\"nobu.dev/app\":      \"someapp\"\n\t\t\t}\n\n\t\t\tspec: forProvider: policy: \"some-bucket-policy\"\n\t\t}\n\t},\n\t{\n\t\tname: \"iam-user\"\n\t\tresource: {\n\t\t\t// Target the user by name\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"User\"\n\t\t\tmetadata: name: \"test-user\"\n\n\t\t\t// Add fields here\n\t\t\tmetadata: annotations: {\n\t\t\t\t\"nobu.dev/cueified\": \"true\"\n\t\t\t\t\"nobu.dev/app\":      \"someapp\"\n\t\t\t}\n\n\t\t\tspec: forProvider: name: \"somename\"\n\t\t}\n\t},\n\t{\n\t\tname: \"iam-role\"\n\t\tresource: {\n\t\t\t// Target the bucket by name\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Role\"\n\t\t\tmetadata: name: \"test-role\"\n\n\t\t\t// Add fields here\n\t\t\tmetadata: annotations: {\n\t\t\t\t\"nobu.dev/cueified\": \"true\"\n\t\t\t\t\"nobu.dev/app\":      \"someapp\"\n\t\t\t}\n\n\t\t\tspec: forProvider: policy: \"some-role-policy\"\n\t\t}\n\t},\n]\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1437,7 +1401,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"test-bucket": {
+							"bucket": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Bucket",
@@ -1455,7 +1419,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}`),
 							},
-							"test-user": {
+							"iam-user": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "User",
@@ -1473,7 +1437,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}`),
 							},
-							"test-role": {
+							"iam-role": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Role",
@@ -1523,7 +1487,7 @@ func TestRunFunction(t *testing.T) {
 									"name": "example-cluster",
 									"base": {
 										"apiVersion": "nobu.dev/v1",
-										"kind": "findme",
+										"kind": "dontfindme",
 										"metadata": {
 											"name": "testname"
 										}
@@ -1540,7 +1504,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"example-nodepool\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1565,12 +1529,12 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-nodepool": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind": "findme",
+									"kind": "Cluster",
 									"metadata": {
-										"name": "testname"
+										"name": "dedpool"
 									},
 									"spec": {
 										"forProvider": {
@@ -1580,16 +1544,16 @@ func TestRunFunction(t *testing.T) {
 									}
 								}`),
 							},
-							"dedpool": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
-									"kind":       "Cluster",
+									"kind":       "dontfindme",
 									"metadata": {
-										"name": "dedpool"
+										"name": "testname"
 									}
 								}`),
 							},
-							"testnetwork": {
+							"example-network": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "Cluster",
@@ -1627,7 +1591,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "#connectionDetails: [\n\t{\n\t\tMatch: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"findme\"\n\t\t\tname:       \"testname\"\n\t\t}\n\n\t\tName:                    \"testname\"\n\t\tType:                    \"FromConnectionSecretKey\"\n\t\tFromConnectionSecretKey: \"thisisthekey\"\n\t},\n]\napiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"example-cluster\"\nconnectionDetails: [\n\t{\n\t\tName:                    \"testname\"\n\t\tType:                    \"FromConnectionSecretKey\"\n\t\tFromConnectionSecretKey: \"thisisthekey\"\n\t},\n]\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1635,7 +1599,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"observe-connections": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1669,7 +1633,7 @@ func TestRunFunction(t *testing.T) {
 							},
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1713,7 +1677,7 @@ func TestRunFunction(t *testing.T) {
 									}
 								}
 							],
-							"value": "#readinessChecks: [\n\t{\n\t\tMatch: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"findme\"\n\t\t\tname:       \"testname\"\n\t\t}\n\t\tType: \"MatchCondition\"\n\t\tMatchCondition: Type:   \"Ready\"\n\t\tMatchCondition: Status: \"True\"\n\t},\n]\napiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"example-cluster\"\nreadinessChecks: [\n\t{\n\t\tType: \"MatchCondition\"\n\t\tMatchCondition: Type:   \"Ready\"\n\t\tMatchCondition: Status: \"True\"\n\t},\n]\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1721,7 +1685,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1764,7 +1728,7 @@ func TestRunFunction(t *testing.T) {
 							Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
 						},
 						Resources: map[string]*fnv1beta1.Resource{
-							"testname": {
+							"example-cluster": {
 								Resource: resource.MustStructJSON(`{
 									"apiVersion": "nobu.dev/v1",
 									"kind": "findme",
@@ -1830,7 +1794,7 @@ func TestRunFunctionFailures(t *testing.T) {
 					Results: []*fnv1beta1.Result{
 						{
 							Severity: fnv1beta1.Severity_SEVERITY_FATAL,
-							Message:  "invalid function input: value cannot be empty",
+							Message:  "invalid function input: export.value: Required value: cue template cannot be empty",
 						},
 					},
 				},
@@ -1863,7 +1827,7 @@ func TestRunFunctionFailures(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: conflicting: \"setattempt\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name:    \"testname\"\n\tspec: conflicting: \"setattempt\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1918,7 +1882,7 @@ func TestRunFunctionFailures(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind:       \"findme\"\nmetadata: name: \"testname\"\nspec: metadata: annotations: {\n\t\"rbac.authorization.k8s.io/autoupdate\": \"true\"\n}\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: metadata: annotations: {\n\t\t\"rbac.authorization.k8s.io/autoupdate\": \"true\"\n\t}\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1954,7 +1918,7 @@ func TestRunFunctionFailures(t *testing.T) {
 						},
 						"export": {
 							"target": "XR",
-							"value": "kind: \"Overwrite\"\nmetadata: name: \"example\"\n"
+							"value": "name: \"example-xr\"\nresource: {\n\tkind: \"Overwrite\"\n\tmetadata: name: \"example\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -1988,7 +1952,7 @@ func TestRunFunctionFailures(t *testing.T) {
 			},
 		},
 		"FailMatchingTargets": {
-			reason: "PatchResources targeting should fail if gvk+name do not match",
+			reason: "PatchResources targeting should fail if names do not match",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
@@ -2011,7 +1975,7 @@ func TestRunFunctionFailures(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"testname\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -2036,7 +2000,7 @@ func TestRunFunctionFailures(t *testing.T) {
 			},
 		},
 		"FailMatchingMultipleTargets": {
-			reason: "PatchResources targeting should fail if gvk+name do not match",
+			reason: "PatchResources targeting should fail if name do not match",
 			args: args{
 				req: &fnv1beta1.RunFunctionRequest{
 					Input: resource.MustStructJSON(`{
@@ -2089,7 +2053,7 @@ func TestRunFunctionFailures(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nspec: forProvider: router: \"somerouter\"\nspec: forProvider: region: \"ap-northeast-1\"\n"
+							"value": "name: \"testname\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tspec: forProvider: router: \"somerouter\"\n\tspec: forProvider: region: \"ap-northeast-1\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{
@@ -2141,7 +2105,7 @@ func TestRunFunctionFailures(t *testing.T) {
 									}
 								}
 							],
-							"value": "apiVersion: \"nobu.dev/v1\"\nkind: \"findme\"\nmetadata: name: \"testname\"\nmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n"
+							"value": "name: \"example-cluster\"\nresource: {\n\tapiVersion: \"nobu.dev/v1\"\n\tkind:       \"findme\"\n\tmetadata: name: \"testname\"\n\tmetadata: annotations: \"kubernetes.io/serviceaccount\": \"newsa\"\n}\n"
 						}
 					}`),
 					Observed: &fnv1beta1.State{

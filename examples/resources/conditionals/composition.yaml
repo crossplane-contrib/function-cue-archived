@@ -23,23 +23,26 @@ spec:
           	PROVIDER: "aws"
           }
           
-          if #ENV["PROVIDER"] == "aws" {
-          	apiVersion: "eks.nobu.dev/v1beta"
-          }
-          if #ENV["PROVIDER"] == "gcp" {
-          	apiVersion: "gke.nobu.dev/v1beta1"
-          }
-          
-          kind: "XNodepool"
-          metadata: name: "TestNodepool"
-          spec: parameters: {
-          	autoscaling: [{
-          		maxNodeCount: 1
-          		minNodeCount: 1
-          	}]
-          	clusterName: "example1"
-          	if #ENV["LABELS"] != _|_ {
-          		nodeLabels: #ENV["LABELS"]
-          	}
-          	region: "us-east-2"
+          name: "TestNodepool"
+          resource: {
+            if #ENV["PROVIDER"] == "aws" {
+            	apiVersion: "eks.nobu.dev/v1beta"
+            }
+            if #ENV["PROVIDER"] == "gcp" {
+            	apiVersion: "gke.nobu.dev/v1beta1"
+            }
+            
+            kind: "XNodepool"
+            spec: parameters: {
+            	autoscaling: [{
+            		maxNodeCount: 1
+            		minNodeCount: 1
+            	}]
+            	clusterName: "example1"
+                // _|_ checks for existence
+            	if #ENV["LABELS"] != _|_ {
+            		nodeLabels: #ENV["LABELS"]
+            	}
+            	region: "us-east-2"
+            }
           }

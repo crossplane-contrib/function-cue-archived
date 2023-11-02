@@ -129,7 +129,6 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 		return rsp, nil
 	}
 	log.Debug(fmt.Sprintf("CUE compile output:\n%s", cmpOut.string))
-	log.Debug(fmt.Sprintf("Connection Data: %+v\n", cmpOut.connectionData))
 
 	// Add the compiled data to the desired resources
 	// Based on the input target
@@ -178,7 +177,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 				return rsp, nil
 			}
 
-			desired[resource.Name(tmp.Resource.GetName())] = tmp
+			desired[resource.Name(r.Name)] = tmp
 		}
 
 		// Match the data to the desired resources
@@ -208,7 +207,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	}
 
 	// Get the connection details and propagate them to the xr
-	conn, err := extractConnectionDetails(observed, cmpOut.connectionData)
+	conn, err := extractConnectionDetails(observed, cmpOut.data)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "cannot get connection details from ObservedComposed"))
 		return rsp, nil
@@ -222,7 +221,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1beta1.RunFunctionRequ
 	// depending on readiness propagation configuration from readinessData
 	// set dxr to ready if all the readiness checks pass
 	log.Debug("Reconciling readiness")
-	err = reconcileReadiness(observed, desired, cmpOut.readinessData)
+	err = reconcileReadiness(observed, desired, cmpOut.data)
 	if err != nil {
 		response.Fatal(rsp, errors.Wrap(err, "failed checking readiness: xr is not ready"))
 		return rsp, nil
@@ -273,17 +272,7 @@ type desiredMatch map[*resource.DesiredComposed][]map[string]interface{}
 
 // matchResources finds and associates the data to the desired resource
 // The length of the passed data should match the total count of desired match data
-func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []map[string]interface{}) (desiredMatch, error) {
-	// Looks through the current desired match and matches an object based on the name+kind
-	findDesired := func(desired map[resource.Name]*resource.DesiredComposed, apiVersion, name, kind string) *resource.DesiredComposed {
-		for _, d := range desired {
-			if d.Resource.GetName() == name && d.Resource.GetKind() == kind && d.Resource.GetAPIVersion() == apiVersion {
-				return d
-			}
-		}
-		return nil
-	}
-
+func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []cueOutputData) (desiredMatch, error) {
 	// Iterate over the data patches and match them to desired resources
 	matches := make(desiredMatch)
 	count := 0
@@ -291,13 +280,12 @@ func matchResources(desired map[resource.Name]*resource.DesiredComposed, data []
 	// this count should match the initial count of the supplied data
 	// otherwise we lost something somewhere
 	for _, d := range data {
-		u := unstructured.Unstructured{Object: d}
 		// PatchDesired
-		if found := findDesired(desired, u.GetAPIVersion(), u.GetName(), u.GetKind()); found != nil {
+		if found, ok := desired[resource.Name(d.Name)]; ok {
 			if _, ok := matches[found]; !ok {
-				matches[found] = []map[string]interface{}{d}
+				matches[found] = []map[string]interface{}{d.Resource}
 			} else {
-				matches[found] = append(matches[found], d)
+				matches[found] = append(matches[found], d.Resource)
 			}
 			count++
 		}
@@ -321,26 +309,26 @@ func (output *successOutput) setSuccessMsgs() {
 	output.msgs = make([]string, output.msgCount)
 	switch output.target {
 	case v1beta1.Resources:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
 	case v1beta1.PatchDesired:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("updated resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
 	case v1beta1.PatchResources:
-		desired := output.object.([]map[string]interface{})
+		desired := output.object.([]cueOutputData)
 		j := 0
 		for _, d := range desired {
-			u := unstructured.Unstructured{Object: d}
+			u := unstructured.Unstructured{Object: d.Resource}
 			output.msgs[j] = fmt.Sprintf("created resource \"%s:%s\"", u.GetName(), u.GetKind())
 			j++
 		}
@@ -353,7 +341,7 @@ func (output *successOutput) setSuccessMsgs() {
 
 type addResourcesConf struct {
 	basename  string
-	data      []map[string]interface{}
+	data      []cueOutputData
 	overwrite bool
 }
 
@@ -381,20 +369,20 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 	case map[resource.Name]*resource.DesiredComposed:
 		// Resources
 		desired := o.(map[resource.Name]*resource.DesiredComposed)
-		name := resource.Name(conf.basename)
 		for _, d := range conf.data {
+			name := resource.Name(d.Name)
 			u := unstructured.Unstructured{
-				Object: d,
+				Object: d.Resource,
 			}
 
 			// Add the resource name as a suffix to the basename
 			// if there are multiple resources to add
 			if len(conf.data) > 1 {
-				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, u.GetName()))
+				name = resource.Name(fmt.Sprintf("%s-%s", conf.basename, d.Name))
 			}
 			// If the value exists, merge its existing value with the patches
 			if v, ok := desired[name]; ok {
-				mergedData := merged(d, v)
+				mergedData := merged(d.Resource, v)
 				u = unstructured.Unstructured{Object: mergedData}
 			}
 			desired[name] = &resource.DesiredComposed{
@@ -418,7 +406,7 @@ func addResourcesTo(o any, conf addResourcesConf) error {
 	case *resource.Composite:
 		// XR
 		for _, d := range conf.data {
-			if err := setData(d, "", o, conf.overwrite); err != nil {
+			if err := setData(d.Resource, "", o, conf.overwrite); err != nil {
 				return errors.Wrap(err, "cannot set data on xr")
 			}
 		}
@@ -476,7 +464,7 @@ func setData(data any, path string, o any, overwrite bool) error {
 		case *resource.DesiredComposed:
 			path = strings.TrimPrefix(path, ".")
 
-			// Because we match on gvk+name, there is no need to set this
+			// Currently do not allow overwriting apiVersion kind or name
 			// ignore setting these again because this will conflict with the overwrite settings
 			if path == "apiVersion" || path == "kind" || path == "metadata.name" {
 				return nil

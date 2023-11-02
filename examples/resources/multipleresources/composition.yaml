@@ -24,28 +24,38 @@ spec:
         value: |
           output: [
           	{
-          		apiVersion: "nobu.dev/v1"
-          		kind:       "Cluster"
-          		metadata: name: "example-cluster"
+                name: "example-cluster"
+                resource: {
+          	  	  apiVersion: "nobu.dev/v1"
+            	  kind:       "Cluster"
+                }
           	},
           	{
-          		apiVersion: "nobu.dev/v1"
-          		kind:       "Network"
-          		metadata: name: "example-network"
+                name: "example-network"
+                resource: {
+          		  apiVersion: "nobu.dev/v1"
+          	  	  kind:       "Network"
+                }
           	},
           	{
-          		apiVersion: "nobu.dev/v1"
-          		kind:       "Memorystore"
-          		metadata: name: "example-memorystore"
+                name: "example-memorystore"
+                resource: {
+          		  apiVersion: "nobu.dev/v1"
+          		  kind:       "Memorystore"
+                }
           	},
           	{
-          		apiVersion: "nobu.dev/v1"
-          		kind:       "Firewalls"
-          		metadata: name: "example-firewalls"
+                name: "example-firewalls"
+                resource: {
+          	  	  apiVersion: "nobu.dev/v1"
+            	  kind:       "Firewalls"
+                }
           	},
           	{
-          		apiVersion: "nobu.dev/v1"
-          		kind:       "Nodepool"
-          		metadata: name: "example-nodepools"
+                name: "example-nodepools"
+                resource: {
+          		  apiVersion: "nobu.dev/v1"
+          		  kind:       "Nodepool"
+                }
           	},
           ]
