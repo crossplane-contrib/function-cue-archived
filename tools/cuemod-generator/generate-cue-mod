@@ -12,4 +12,12 @@ for p in "${PROVIDERS[@]}"; do
     find "${GOPATH}/pkg/mod/github.com/crossplane-contrib/${p}/apis" -name "*.go" | xargs -I {} dirname {} | uniq | xargs cue get go
 done
 
+declare -a ADDITIONAL_PACKAGES=( "github.com/crossplane/crossplane-runtime/apis/common/v1" )
+
+for pkg in "${ADDITIONAL_PACKAGES[@]}"; do
+    go get "${pkg}"
+
+    cue get go "${pkg}"
+done
+
 mv cue.mod out
