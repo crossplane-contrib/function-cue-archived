@@ -32,9 +32,9 @@ spec:
           #clusterName: "cluster-name"
           
           #NodeCount: {
-          classification: string
-          machineType:    string
-          count:          _
+            classification: string
+            machineType:    string
+            count:          _
           }
           
           #Nodepools: [...#NodeCount] & [
@@ -46,8 +46,8 @@ spec:
           ]
           
           #Bucket: {
-          name:   string
-          policy: "default-policy-arn"
+            name:   string
+            policy: "default-policy-arn"
           }
           
           #Buckets: [...#Bucket] & [
@@ -59,62 +59,62 @@ spec:
           
           output: list.FlattenN([
             {
-            name: "mycluster"
-            resource: {
-              apiVersion: #apiVersion
+              name: "mycluster"
+              resource: {
+                apiVersion: #apiVersion
                 kind:       "Cluster"
                 spec: forProvider: region: #region
                 spec: forProvider: name:   #clusterName
-            }
-          },
+              }
+            },
             {
               name: "mynetwork"
-                resource: {
-                  apiVersion: #apiVersion
-                    kind:       "XVpc"
-                    spec: parameters: region:     #region
-                    spec: parameters: visibility: "private"
-                }
+              resource: {
+                apiVersion: #apiVersion
+                kind:       "XVpc"
+                spec: parameters: region:     #region
+                spec: parameters: visibility: "private"
+              }
             },
             {
               name: "myfirewall"
-                resource: {
-                  apiVersion: #apiVersion
-                    kind:       "XFirewall"
-                    spec: parameters: region: #region
-                }
+              resource: {
+                apiVersion: #apiVersion
+                kind:       "XFirewall"
+                spec: parameters: region: #region
+              }
             },
           ]+[
             for nodepool in #Nodepools {
-            [
-              for i in list.Range(0, nodepool.count, 1) {
-              {
-                let #mT = strings.Replace(nodepool.machineType, ".", "", -1)
-                name: "\(nodepool.classification)-\(#mT)-\(i)"
-                  resource: {
-                    apiVersion: #apiVersion
+              [
+                for i in list.Range(0, nodepool.count, 1) {
+                  {
+                    let #mT = strings.Replace(nodepool.machineType, ".", "", -1)
+                    name: "\(nodepool.classification)-\(#mT)-\(i)"
+                    resource: {
+                      apiVersion: #apiVersion
                       kind:       "XNodepool"
                       spec: parameters: {
                         machineType: nodepool.machineType
-                          region:      #region
-                          cluster:     #clusterName
+                        region:      #region
+                        cluster:     #clusterName
+                      }
+                    }
+                  }
+                },
+              ]
+            },
+          ]+[
+            for bucket in #Buckets {
+              {
+                name: bucket.name
+                  resource: {
+                    apiVersion: #apiVersion
+                      kind:       "XBucket"
+                      spec: parameters: {
+                        policy: bucket.policy
                       }
                   }
               }
             },
-            ]
-          },
-          ]+[
-            for bucket in #Buckets {
-            {
-              name: bucket.name
-                resource: {
-                  apiVersion: #apiVersion
-                    kind:       "XBucket"
-                    spec: parameters: {
-                      policy: bucket.policy
-                    }
-                }
-            }
-          },
           ], 1)
