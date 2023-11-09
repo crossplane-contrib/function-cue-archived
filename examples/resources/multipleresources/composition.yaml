@@ -50,7 +50,7 @@ spec:
                 apiVersion: "nobu.dev/v1"
                 kind:       "Firewalls"
               }
-          	},
+            },
             {
               name: "example-nodepools"
               resource: {
