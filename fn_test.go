@@ -2506,3 +2506,160 @@ func TestSetData(t *testing.T) {
 		})
 	}
 }
+
+var benchRunFunctionTable = []*fnv1beta1.RunFunctionRequest{
+	// Single
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "basic"
+						},
+						"export": {
+							"target": "Resources",
+							"value": "name: \"basic\"\nresource: {\n\tapiVersion: \"example.org/v1\"\n\tkind:       \"Generated\"\n}\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+	// JSONStreamExpressions3Objects
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"json.MarshalStream(output)"
+								]
+							},
+							"target": "Resources",
+							"value": "output: [\n\t{\n\t\tname: \"example-cluster\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Cluster\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-nodepool\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Nodepool\"\n\t\t}\n\t},\n]\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+	// YAMLStreamExpressions3Objects
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"yaml.MarshalStream(output)"
+								]
+							},
+							"target": "Resources",
+							"value": "output: [\n\t{\n\t\tname: \"example-cluster\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Cluster\"\n\t\t}\n\t},\n\t{\n\t\tname: \"example-nodepool\"\n\t\tresource: {\n\t\t\tapiVersion: \"nobu.dev/v1\"\n\t\t\tkind:       \"Nodepool\"\n\t\t}\n\t},\n]\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+	// Identifier
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "identification"
+						},
+						"export": {
+							"target": "Resources",
+							"value": "#deployment: [ID=_]: {\n\tapiVersion: \"apps/v1\"\n\tkind:       \"Deployment\"\n\tmetadata: name: ID\n\tspec: {\n\t\treplicas: *1 | int\n\t\ttemplate: {\n\t\t\tmetadata: labels: {\n\t\t\t\tapp:       ID\n\t\t\t\tdomain:    \"prod\"\n\t\t\t\tcomponent: string\n\t\t\t}\n\t\t\tspec: containers: [{name: ID}]\n\t\t}\n\t}\n}\n\n#deployment: echoserver: spec: template: {\n\tmetadata: annotations: {\n\t\t\"prometheus.io.scrape\": \"true\"\n\t\t\"prometheus.io.port\":   \"7080\"\n\t}\n\tmetadata: labels: {\n\t\t\"component\": \"core\"\n\t}\n}\n\nname: \"identifier\"\nresource: #deployment.echoserver\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+	// Multiple Expressions
+	// Each expression requires multiple compilations
+	// Which is why this is ~3x longer than the others
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"cluster",
+									"nodepool",
+									"vpc"
+								]
+							},
+							"target": "Resources",
+							"value": "cluster: {\n\tname: \"example-cluster\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Cluster\"\n\t\tmetadata: name: \"example-cluster\"\n\t}\n}\nnodepool: {\n\tname: \"example-nodepool\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Nodepool\"\n\t\tmetadata: name: \"example-nodepool\"\n\t}\n}\nvpc: {\n\tname: \"example-vpc\"\n\tresource: {\n\t\tapiVersion: \"nobu.dev/v1\"\n\t\tkind:       \"Vpc\"\n\t\tmetadata: name: \"example-vpc\"\n\t}\n}\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+	// 20 Objects
+	&fnv1beta1.RunFunctionRequest{
+		Input: resource.MustStructJSON(`{
+						"apiVersion": "dummy.fn.crossplane.io",
+						"kind": "dummy",
+						"metadata": {
+							"name": "expression"
+						},
+						"export": {
+							"options": {
+								"expressions": [
+									"yaml.MarshalStream(output)"
+								]
+							},
+							"target": "Resources",
+							"value": "import (\n\t\"list\"\n\t\"strings\"\n)\n\n#apiVersion:  \"nobu.dev/v1\"\n#region:      \"us-east-2\"\n#clusterName: \"cluster-name\"\n\n#NodeCount: {\n\tclassification: string\n\tmachineType:    string\n\tcount:          _\n}\n\n#Nodepools: [...#NodeCount] & [\n\t\t{classification: \"someclass\", machineType:  \"m5.large\", count:     1},\n\t\t{classification: \"someclass2\", machineType: \"m5.2xlarge\", count:   1},\n\t\t{classification: \"someclass3\", machineType: \"m6gd.4xlarge\", count: 2},\n\t\t{classification: \"someclass4\", machineType: \"c5.4xlarge\", count:   4},\n\t\t{classification: \"someclass5\", machineType: \"c5.12xlarge\", count:  5},\n]\n\n#Bucket: {\n\tname:   string\n\tpolicy: \"default-policy-arn\"\n}\n\n#Buckets: [...#Bucket] & [\n\t\t{name: \"bucket1\"},\n\t\t{name: \"bucket2\"},\n\t\t{name: \"bucket3\"},\n\t\t{name: \"bucket4\"},\n]\n\noutput: list.FlattenN([\n\t{\n\t\tname: \"mycluster\"\n\t\tresource: {\n\t\t\tapiVersion: #apiVersion\n\t\t\tkind:       \"Cluster\"\n\t\t\tspec: forProvider: region: #region\n\t\t\tspec: forProvider: name:   #clusterName\n\t\t}\n\t},\n\t{\n\t\tname: \"mynetwork\"\n\t\tresource: {\n\t\t\tapiVersion: #apiVersion\n\t\t\tkind:       \"XVpc\"\n\t\t\tspec: parameters: region:     #region\n\t\t\tspec: parameters: visibility: \"private\"\n\t\t}\n\t},\n\t{\n\t\tname: \"myfirewall\"\n\t\tresource: {\n\t\t\tapiVersion: #apiVersion\n\t\t\tkind:       \"XFirewall\"\n\t\t\tspec: parameters: region: #region\n\t\t}\n\t},\n]+[\n\tfor nodepool in #Nodepools {\n\t\t[\n\t\t\tfor i in list.Range(0, nodepool.count, 1) {\n\t\t\t\t{\n\t\t\t\t\tlet #mT = strings.Replace(nodepool.machineType, \".\", \"\", -1)\n\t\t\t\t\tname: \"\\(nodepool.classification)-\\(#mT)-\\(i)\"\n\t\t\t\t\tresource: {\n\t\t\t\t\t\tapiVersion: #apiVersion\n\t\t\t\t\t\tkind:       \"XNodepool\"\n\t\t\t\t\t\tspec: parameters: {\n\t\t\t\t\t\t\tmachineType: nodepool.machineType\n\t\t\t\t\t\t\tregion:      #region\n\t\t\t\t\t\t\tcluster:     #clusterName\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t},\n\t\t]\n\t},\n]+[\n\tfor bucket in #Buckets {\n\t\t{\n\t\t\tname: bucket.name\n\t\t\tresource: {\n\t\t\t\tapiVersion: #apiVersion\n\t\t\t\tkind:       \"XBucket\"\n\t\t\t\tspec: parameters: {\n\t\t\t\t\tpolicy: bucket.policy\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n], 1)\n"
+						}
+					}`),
+		Observed: &fnv1beta1.State{
+			Composite: &fnv1beta1.Resource{
+				Resource: resource.MustStructJSON(`{"apiVersion":"example.org/v1","kind":"XR"}`),
+			},
+		},
+	},
+}
+
+// Benchmarks
+
+func benchmarkRunFunction(testIndex int, b *testing.B) {
+	f := &Function{log: logging.NewNopLogger()}
+	for n := 0; n < b.N; n++ {
+		f.RunFunction(context.Background(), benchRunFunctionTable[testIndex])
+	}
+}
+
+func BenchmarkRunFunctionBasic(b *testing.B)       { benchmarkRunFunction(0, b) }
+func BenchmarkRunFunctionStreamJSON(b *testing.B)  { benchmarkRunFunction(1, b) }
+func BenchmarkRunFunctionStreamYAML(b *testing.B)  { benchmarkRunFunction(2, b) }
+func BenchmarkRunFunctionIdentifier(b *testing.B)  { benchmarkRunFunction(3, b) }
+func BenchmarkRunFunction3Obj3Expr(b *testing.B)   { benchmarkRunFunction(4, b) }
+func BenchmarkRunFunction20Objs1Expr(b *testing.B) { benchmarkRunFunction(5, b) }
