@@ -23,39 +23,39 @@ spec:
           - yaml.MarshalStream(output)
         value: |
           output: [
-          	{
-                name: "example-cluster"
-                resource: {
-          	  	  apiVersion: "nobu.dev/v1"
-            	  kind:       "Cluster"
-                }
-          	},
-          	{
-                name: "example-network"
-                resource: {
-          		  apiVersion: "nobu.dev/v1"
-          	  	  kind:       "Network"
-                }
-          	},
-          	{
-                name: "example-memorystore"
-                resource: {
-          		  apiVersion: "nobu.dev/v1"
-          		  kind:       "Memorystore"
-                }
-          	},
-          	{
-                name: "example-firewalls"
-                resource: {
-          	  	  apiVersion: "nobu.dev/v1"
-            	  kind:       "Firewalls"
-                }
-          	},
-          	{
-                name: "example-nodepools"
-                resource: {
-          		  apiVersion: "nobu.dev/v1"
-          		  kind:       "Nodepool"
-                }
-          	},
+            {
+              name: "example-cluster"
+              resource: {
+                apiVersion: "nobu.dev/v1"
+                kind:       "Cluster"
+              }
+            },
+            {
+              name: "example-network"
+              resource: {
+                apiVersion: "nobu.dev/v1"
+                kind:       "Network"
+              }
+            },
+            {
+              name: "example-memorystore"
+              resource: {
+                apiVersion: "nobu.dev/v1"
+                kind:       "Memorystore"
+              }
+            },
+            {
+              name: "example-firewalls"
+              resource: {
+                apiVersion: "nobu.dev/v1"
+                kind:       "Firewalls"
+              }
+            },
+            {
+              name: "example-nodepools"
+              resource: {
+                apiVersion: "nobu.dev/v1"
+                kind:       "Nodepool"
+              }
+            },
           ]

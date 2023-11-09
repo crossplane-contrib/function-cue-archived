@@ -1,0 +1,120 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnopresources.nop.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: nop.example.org/v1alpha1
+    kind: XNopResource
+  mode: Pipeline
+  pipeline:
+  - step: conditional
+    functionRef:
+      name: function-cue
+    input:
+      apiVersion: cue.fn.crossplane.io/v1beta1
+      kind: CUEInput
+      metadata:
+        name: multiple-objects
+      export:
+        target: Resources
+        options:
+          expressions:
+          - yaml.MarshalStream(output)
+        value: |
+          import (
+            "list"
+            "strings"
+          )
+          
+          #apiVersion:  "nobu.dev/v1"
+          #region:      "us-east-2"
+          #clusterName: "cluster-name"
+          
+          #NodeCount: {
+            classification: string
+            machineType:    string
+            count:          _
+          }
+          
+          #Nodepools: [...#NodeCount] & [
+            {classification: "someclass", machineType:  "m5.large", count:     1},
+            {classification: "someclass2", machineType: "m5.2xlarge", count:   1},
+            {classification: "someclass3", machineType: "m6gd.4xlarge", count: 2},
+            {classification: "someclass4", machineType: "c5.4xlarge", count:   4},
+            {classification: "someclass5", machineType: "c5.12xlarge", count:  5},
+          ]
+          
+          #Bucket: {
+            name:   string
+            policy: "default-policy-arn"
+          }
+          
+          #Buckets: [...#Bucket] & [
+            {name: "bucket1"},
+            {name: "bucket2"},
+            {name: "bucket3"},
+            {name: "bucket4"},
+          ]
+          
+          output: list.FlattenN([
+            {
+              name: "mycluster"
+              resource: {
+                apiVersion: #apiVersion
+                kind:       "Cluster"
+                spec: forProvider: region: #region
+                spec: forProvider: name:   #clusterName
+              }
+            },
+            {
+              name: "mynetwork"
+              resource: {
+                apiVersion: #apiVersion
+                kind:       "XVpc"
+                spec: parameters: region:     #region
+                spec: parameters: visibility: "private"
+              }
+            },
+            {
+              name: "myfirewall"
+              resource: {
+                apiVersion: #apiVersion
+                kind:       "XFirewall"
+                spec: parameters: region: #region
+              }
+            },
+          ]+[
+            for nodepool in #Nodepools {
+              [
+                for i in list.Range(0, nodepool.count, 1) {
+                  {
+                    let #mT = strings.Replace(nodepool.machineType, ".", "", -1)
+                    name: "\(nodepool.classification)-\(#mT)-\(i)"
+                    resource: {
+                      apiVersion: #apiVersion
+                      kind:       "XNodepool"
+                      spec: parameters: {
+                        machineType: nodepool.machineType
+                        region:      #region
+                        cluster:     #clusterName
+                      }
+                    }
+                  }
+                },
+              ]
+            },
+          ]+[
+            for bucket in #Buckets {
+              {
+                name: bucket.name
+                resource: {
+                  apiVersion: #apiVersion
+                  kind:       "XBucket"
+                  spec: parameters: {
+                    policy: bucket.policy
+                  }
+                }
+              }
+            },
+          ], 1)

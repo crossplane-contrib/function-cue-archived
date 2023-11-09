@@ -1,0 +1,4 @@
+apiVersion: nopexample.org/v1
+kind: XCluster
+metadata:
+  name: test-xrender

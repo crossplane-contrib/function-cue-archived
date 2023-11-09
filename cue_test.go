@@ -124,3 +124,43 @@ func TestCUECompileFailures(t *testing.T) {
 		assert.Equal(t, tv.Err, err.Error(), "%s: expected error %q: got %q", desc, tv.Err, err.Error())
 	}
 }
+
+// CUEInput.Export.Value(s) for benchmarks
+var benchTable = []string{
+	// Empty
+	"",
+	// def
+	"a: b: 5\na: c: 4",
+	// Operator
+	"out: 18 - 22",
+	// Operators
+	"out: 3 div 2",
+	// stdlib
+	"r: rem(-5, 2)",
+	// vars
+	"#test: \"somestring\"\n\nout: \"this-is-concatting-\\(#test)\"\n",
+	// package def
+	"package main\n\nenv:  string | *\"dev\" @tag(env)\nhost: \"\\(env).domain.com\"\n",
+	// loops
+	"[ for x in #items if __rem(x, 2) == 0 {x * x}]\n\n#items: [ 1, 2, 3, 4, 5, 6, 7, 8, 9]\n",
+	// imports
+	"import (\n\t\"math\"\n)\n\nout: math.Dim(50, 45)\n",
+}
+
+func benchmarkCUECompile(testIndex int, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		// benchmarks run with outputJSON because that is the default for function-cue
+		// Streams output in outputTXT, these benchmarks are covered in fn_test.go
+		cueCompile(outputJSON, v1beta1.CUEInput{Export: v1beta1.Export{Value: benchTable[testIndex]}}, compileOpts{parseData: false})
+	}
+}
+
+func BenchmarkCUECompileEmpty(b *testing.B)        { benchmarkCUECompile(0, b) }
+func BenchmarkCUECompileBasic(b *testing.B)        { benchmarkCUECompile(1, b) }
+func BenchmarkCUECompileOperatorSub(b *testing.B)  { benchmarkCUECompile(2, b) }
+func BenchmarkCUECompileOperatorDiv(b *testing.B)  { benchmarkCUECompile(3, b) }
+func BenchmarkCUECompileStdlib(b *testing.B)       { benchmarkCUECompile(4, b) }
+func BenchmarkCUECompileVars(b *testing.B)         { benchmarkCUECompile(5, b) }
+func BenchmarkCUECompilePckageSchema(b *testing.B) { benchmarkCUECompile(6, b) }
+func BenchmarkCUECompileLoops(b *testing.B)        { benchmarkCUECompile(7, b) }
+func BenchmarkCUECompileImport(b *testing.B)       { benchmarkCUECompile(8, b) }
