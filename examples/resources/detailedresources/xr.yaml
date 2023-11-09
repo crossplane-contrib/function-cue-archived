@@ -2,5 +2,3 @@ apiVersion: nopexample.org/v1
 kind: XCluster
 metadata:
   name: test-xrender
-spec:
-  bucketRegion: us-east-2
