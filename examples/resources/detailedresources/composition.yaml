@@ -108,13 +108,13 @@ spec:
             for bucket in #Buckets {
               {
                 name: bucket.name
-                  resource: {
-                    apiVersion: #apiVersion
-                      kind:       "XBucket"
-                      spec: parameters: {
-                        policy: bucket.policy
-                      }
+                resource: {
+                  apiVersion: #apiVersion
+                  kind:       "XBucket"
+                  spec: parameters: {
+                    policy: bucket.policy
                   }
+                }
               }
             },
           ], 1)
