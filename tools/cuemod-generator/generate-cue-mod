@@ -1,23 +1,64 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-set -e -x -o pipefail
+import glob
+import json
+import os
+import subprocess
 
-echo $(pwd)
+def go_get_details(org, repo, versions):
+    for version in versions:
+        url = f"github.com/{org}/{repo}@{version}"
+        subprocess.check_output(["go", "get", url])
 
-declare -a PROVIDERS=( "provider-aws@v0.44.2" "provider-azure@v0.20.0" "provider-gcp@v0.22.0" )
+def cue_get_details(org, repo, versions):
+    for version in versions:
+        gopath = os.getenv("GOPATH")
+        path = f"{gopath}/pkg/mod/github.com/{org}/{repo}@{version}/apis"
 
-for p in "${PROVIDERS[@]}"; do
-    go get "github.com/crossplane-contrib/${p}"
+        print("********************")
+        print("Walking {path}")
+        print("********************")
+        print()
+        for root, dirs, files in os.walk(path, topdown=False):
+            for name in dirs:
+                dir_path = os.path.join(root, name)
+                # Only look for dirs containing go files
+                if len(glob.glob(f"{dir_path}/*.go")) != 0:
+                    subprocess.check_output(["cue", "get", "go", dir_path])
 
-    find "${GOPATH}/pkg/mod/github.com/crossplane-contrib/${p}/apis" -name "*.go" | xargs -I {} dirname {} | uniq | xargs cue get go
-done
+def version_cue_data(version):
+    print("********************")
+    print(f"Versioning cue data: {version}")
+    print("********************")
+    print()
+    for root, dirs, files in os.walk("cue.mod", topdown=False):
+        for name in dirs:
+            dir_path = os.path.join(root, name)
+            # only look for dirs containing cue files
 
-declare -a ADDITIONAL_PACKAGES=( "github.com/crossplane/crossplane-runtime/apis/common/v1@v1.14.1" )
+            cue_files = glob.glob(f"{dir_path}/*.cue")
+            if len(cue_files) != 0:
+                os.mkdir(os.path.join(dir_path, version))
 
-for pkg in "${ADDITIONAL_PACKAGES[@]}"; do
-    go get "${pkg}"
+            for f in cue_files:
+                basename = os.path.basename(f)
+                versioned_file = os.path.join(dir_path, version, basename)
+                os.rename(f, versioned_file)
+                print("{f} -> {verioned_file}")
 
-    cue get go "${pkg}"
-done
+def main():
+    with open("providers.json", "r") as f:
+        providers = json.loads(f.read())
 
-mv cue.mod out
+        for org, details in providers["orgs"].items():
+            for repo, versions in details.items():
+                go_get_details(org, repo, versions)
+
+                cue_get_details(org, repo, versions)
+
+
+    print("Moving cue.mod to output dir")
+    os.rename("cue.mod", "/out/cue.mod")
+
+if __name__ == "__main__":
+    main()
