@@ -3,39 +3,79 @@
 import glob
 import json
 import os
+import re
 import subprocess
 
-def go_get_details(org, repo, versions):
+VERSION_PATTERN = re.compile("^v[0-9.]+$")
+
+def process_versions(org, repo, versions):
+    processed = []
     for version in versions:
         url = f"github.com/{org}/{repo}@{version}"
-        subprocess.check_output(["go", "get", url])
+        go_get_detail(url)
 
-def cue_get_details(org, repo, versions):
-    for version in versions:
-        gopath = os.getenv("GOPATH")
-        path = f"{gopath}/pkg/mod/github.com/{org}/{repo}@{version}/apis"
+        cue_get_details(org, repo, version)
 
-        print("********************")
-        print("Walking {path}")
-        print("********************")
-        print()
-        for root, dirs, files in os.walk(path, topdown=False):
-            for name in dirs:
-                dir_path = os.path.join(root, name)
-                # Only look for dirs containing go files
-                if len(glob.glob(f"{dir_path}/*.go")) != 0:
-                    subprocess.check_output(["cue", "get", "go", dir_path])
+        version_cue_data(org, repo, version, processed)
 
-def version_cue_data(version):
+        processed.append(version)
+
+def go_get_detail(url):
+    print()
+    print("********************")
+    print("Go dependencies")
+    print("********************")
+    print()
+
+    subprocess.check_output(["go", "get", url])
+
+def cue_get_details(org, repo, version):
+    gopath = os.getenv("GOPATH")
+    prefix = os.path.join(gopath, "pkg", "mod")
+    path = f"{prefix}/github.com/{org}/{repo}@{version}/apis"
+
+    print()
+    print("********************")
+    print(f"Walking {path}")
+    print("********************")
+    print()
+
+    for root, dirs, files in os.walk(path, topdown=False):
+        for name in dirs:
+            dir_path = os.path.join(root, name)
+            # Only look for dirs containing go files
+            if len(glob.glob(f"{dir_path}/*.go")) != 0:
+                # remove the {gopath}/pkg/mod
+                # and the @{version} in the dir name
+                url = dir_path.removeprefix(f"{prefix}/").replace(f"@{version}", "")
+                subprocess.check_output(["cue", "get", "go", url])
+                print(f"cue get go {url}")
+
+def dir_processed(dir_path, processed):
+    paths = os.path.split(dir_path)
+
+    # if the last part of the path is not a version, skip it
+    if not VERSION_PATTERN.match(paths[-1]):
+        return False
+
+    return paths[-1] in processed
+
+def version_cue_data(org, repo, version, processed):
+    print()
     print("********************")
     print(f"Versioning cue data: {version}")
     print("********************")
     print()
-    for root, dirs, files in os.walk("cue.mod", topdown=False):
+
+    for root, dirs, files in os.walk(f"cue.mod/gen/github.com/{org}/{repo}", topdown=False):
         for name in dirs:
             dir_path = os.path.join(root, name)
-            # only look for dirs containing cue files
 
+            # Skip dirs we've already processed
+            if dir_processed(dir_path, processed):
+                continue
+
+            # only look for dirs containing cue files
             cue_files = glob.glob(f"{dir_path}/*.cue")
             if len(cue_files) != 0:
                 os.mkdir(os.path.join(dir_path, version))
@@ -44,21 +84,22 @@ def version_cue_data(version):
                 basename = os.path.basename(f)
                 versioned_file = os.path.join(dir_path, version, basename)
                 os.rename(f, versioned_file)
-                print("{f} -> {verioned_file}")
+                print(f"{f} -> {versioned_file}")
 
 def main():
+    print("Generating cue.mod")
+    print("...")
+
     with open("providers.json", "r") as f:
         providers = json.loads(f.read())
 
         for org, details in providers["orgs"].items():
             for repo, versions in details.items():
-                go_get_details(org, repo, versions)
-
-                cue_get_details(org, repo, versions)
+                process_versions(org, repo, versions)
 
 
     print("Moving cue.mod to output dir")
-    os.rename("cue.mod", "/out/cue.mod")
+    os.rename("cue.mod", "./out/cue.mod")
 
 if __name__ == "__main__":
     main()
