@@ -4,6 +4,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 
 VERSION_PATTERN = re.compile("^v[0-9.]+$")
@@ -99,7 +100,7 @@ def main():
 
 
     print("Moving cue.mod to output dir")
-    os.rename("cue.mod", "./out/cue.mod")
+    shutil.move("cue.mod", "./out/cue.mod")
 
 if __name__ == "__main__":
     main()

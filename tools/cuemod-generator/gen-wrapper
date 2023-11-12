@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Cleans current cue.mod
+# Builds and runs the cuemod-generator
+
+GROOT=$(git rev-parse --show-toplevel)
+
+rm -rf "${GROOT}/cue.mod"
+
+docker build -t function-cue-cuemod:latest .
+
+docker run -v "${GROOT}:/app/out" function-cue-cuemod:latest

@@ -11,17 +11,13 @@ The supported org _x_ providers _x_ version list is stored within the `providers
 
 `cue export providers.cue -o providers.json` is run during the docker build
 
-### Go Generate
-
-`go generate ./...`
-
 ### Building
 
 `docker build -t function-cue-cuemod:latest .`
 
 ### Running the docker container
 
-`docker run -it -v $(git rev-parse --show-toplevel):/app/out function-cue-cuemod:latest`
+`docker run -v $(git rev-parse --show-toplevel):/app/out function-cue-cuemod:latest`
 
 ### Note
 
