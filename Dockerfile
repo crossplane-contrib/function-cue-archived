@@ -24,7 +24,6 @@ WORKDIR /
 
 COPY --from=build-stage /function /function
 COPY --from=package-stage /package.yaml /package.yaml
-COPY cue.mod/ ./cue.mod
 
 EXPOSE 9443
 
