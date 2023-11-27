@@ -125,7 +125,7 @@ spec:
   package: mitsuwa/function-cue:v0.1.2
 ```
 
-With cue.mod, the cue.mod is its own layer so it should get cached, currently it is `~163m`
+With cue.mod, the cue.mod is its own layer so it should get cached, currently it is `~164M`
 ```yaml
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
@@ -134,6 +134,10 @@ metadata:
 spec:
   package: mitsuwa/function-cuemod:v0.1.2
 ```
+
+## Importable Packages
+
+See [libraries](docs/LIBRARIES.md#cue.mod)
 
 ## Debugging
 

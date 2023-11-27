@@ -69,6 +69,8 @@ github.com/crossplane/crossplane-runtime v1.14.0 h1:MFo93iOJLvYaMCaCoyH2vFWsHebd
 github.com/crossplane/crossplane-runtime v1.14.0/go.mod h1:aOP+5W2wKpvthVs3pFNbVOe1jwrKYbJho0ThGNCVz9o=
 github.com/crossplane/crossplane-runtime v1.14.1 h1:TCa7R1N4bDGHjsLhiRxR/mUhwmistlMACHm0kiiYKck=
 github.com/crossplane/crossplane-runtime v1.14.1/go.mod h1:aOP+5W2wKpvthVs3pFNbVOe1jwrKYbJho0ThGNCVz9o=
+github.com/crossplane/crossplane-runtime v1.14.2 h1:pV5JMzyzi/kcbeVBVPCat5MHH8zS94MBUapAyGx/Ry0=
+github.com/crossplane/crossplane-runtime v1.14.2/go.mod h1:aOP+5W2wKpvthVs3pFNbVOe1jwrKYbJho0ThGNCVz9o=
 github.com/crossplane/function-sdk-go v0.0.0-20230930011419-ec31b88ab696 h1:WwmZdPz2m+z9TxOZKxEamF84bSaAakEAsIHwd+iOtxI=
 github.com/crossplane/function-sdk-go v0.0.0-20230930011419-ec31b88ab696/go.mod h1:KzsTYRhUS+HGzGASlJMxnURTZ1tCnOihjfKSBM3AfKo=
 github.com/crossplane/function-sdk-go v0.1.0 h1:WN3CUSaj6wgDqQPZZP1whMVIkTAZtN3HVCS67pTMzd8=
@@ -658,11 +660,15 @@ honnef.co/go/tools v0.0.1-2020.1.3/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9vFzvIQ3k=
 k8s.io/api v0.28.3 h1:Gj1HtbSdB4P08C8rs9AR94MfSGpRhJgsS+GF9V26xMM=
 k8s.io/api v0.28.3/go.mod h1:MRCV/jr1dW87/qJnZ57U5Pak65LGmQVkKTzf3AtKFHc=
+k8s.io/api v0.28.4 h1:8ZBrLjwosLl/NYgv1P7EQLqoO8MGQApnbgH8tu3BMzY=
+k8s.io/api v0.28.4/go.mod h1:axWTGrY88s/5YE+JSt4uUi6NMM+gur1en2REMR7IRj0=
 k8s.io/apiextensions-apiserver v0.28.0 h1:CszgmBL8CizEnj4sj7/PtLGey6Na3YgWyGCPONv7E9E=
 k8s.io/apiextensions-apiserver v0.28.0/go.mod h1:uRdYiwIuu0SyqJKriKmqEN2jThIJPhVmOWETm8ud1VE=
 k8s.io/apiextensions-apiserver v0.28.3/go.mod h1:NE1XJZ4On0hS11aWWJUTNkmVB03j9LM7gJSisbRt8Lc=
 k8s.io/apimachinery v0.28.3 h1:B1wYx8txOaCQG0HmYF6nbpU8dg6HvA06x5tEffvOe7A=
 k8s.io/apimachinery v0.28.3/go.mod h1:uQTKmIqs+rAYaq+DFaoD2X7pcjLOqbQX2AOiO0nIpb8=
+k8s.io/apimachinery v0.28.4 h1:zOSJe1mc+GxuMnFzD4Z/U1wst50X28ZNsn5bhgIIao8=
+k8s.io/apimachinery v0.28.4/go.mod h1:wI37ncBvfAoswfq626yPTe6Bz1c22L7uaJ8dho83mgg=
 k8s.io/client-go v0.28.2 h1:DNoYI1vGq0slMBN/SWKMZMw0Rq+0EQW6/AK4v9+3VeY=
 k8s.io/client-go v0.28.2/go.mod h1:sMkApowspLuc7omj1FOSUxSoqjr+d5Q0Yc0LOFnYFJY=
 k8s.io/client-go v0.28.3 h1:2OqNb72ZuTZPKCl+4gTKvqao0AMOl9f3o2ijbAj3LI4=
