@@ -122,6 +122,10 @@ spec:
   package: mitsuwa/function-cue:v0.1.2
 ```
 
+## Importable Packages
+
+See [libraries](docs/LIBRARIES.md#cue.mod)
+
 ## Debugging
 
 Logs are emitted to the Function's pod logs. Look for the Function pod in `crossplane-system`.
