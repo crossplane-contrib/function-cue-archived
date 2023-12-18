@@ -1,33 +1,31 @@
-FROM golang:1.21 as build-stage
+# syntax=docker/dockerfile:1
+
+# We use the latest Go 1.x version unless asked to use something else.
+ARG GO_VERSION=1
+
+# Setup the base environment.
+FROM --platform=${BUILDPLATFORM} golang:${GO_VERSION} AS base
 
 WORKDIR /fn
+ENV CGO_ENABLED=0
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-COPY input/ ./input
-COPY *.go ./
+# Build the Function.
+FROM base AS build
+ARG TARGETOS
+ARG TARGETARCH
+RUN --mount=target=. \
+    --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /function .
 
-RUN CGO_ENABLED=0 go build -o /function .
-
-FROM debian:12.2-slim as package-stage
-
-WORKDIR /package
-COPY package/ ./
-
-RUN cat crossplane.yaml > /package.yaml
-RUN cat input/*.yaml >> /package.yaml
-
-FROM gcr.io/distroless/base-debian11 AS build-release-stage
-
+# Produce the Function image.
+FROM gcr.io/distroless/base-debian11 AS image
 WORKDIR /
-
-COPY --from=build-stage /function /function
-COPY --from=package-stage /package.yaml /package.yaml
+COPY --from=build /function /function
 COPY lib/ ./cuelib
-
 EXPOSE 9443
-
 USER nonroot:nonroot
-
 ENTRYPOINT ["/function"]
