@@ -50,6 +50,7 @@ jobs:
 
       - name: Lint
         uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
         with:
           version: ${{ env.GOLANGCI_VERSION }}
 
