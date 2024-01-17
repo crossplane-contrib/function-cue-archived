@@ -28,9 +28,7 @@ env:
   # organization) settings. Create a token at https://accounts.upbound.io.
   XPKG_ACCESS_ID: ${{ secrets.XPKG_ACCESS_ID }}
 
-  # The package to push, without a version tag. The default matches GitHub. For
-  # example xpkg.upbound.io/crossplane/function-template-go.
-  XPKG: xpkg.upbound.io/${{ github.repository}}
+  XPKG: xpkg.upbound.io/nobudev/function-cue
 
   # The package version to push. The default is 0.0.0-gitsha.
   XPKG_VERSION: ${{ inputs.version }}
@@ -139,7 +137,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: .
-          merge-multipath: true
+          merge-multiple: true
 
       - name: Setup the Crossplane CLI
         run: "curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh"
