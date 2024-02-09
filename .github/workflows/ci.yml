@@ -47,7 +47,7 @@ jobs:
           cache: false  # The golangci-lint action does its own caching.
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         continue-on-error: true
         with:
           version: ${{ env.GOLANGCI_VERSION }}
