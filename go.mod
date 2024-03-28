@@ -6,7 +6,7 @@ toolchain go1.21.3
 
 require (
 	cuelang.org/go v0.7.0
-	github.com/alecthomas/kong v0.8.1
+	github.com/alecthomas/kong v0.9.0
 	github.com/crossplane/crossplane-runtime v1.15.0-rc.0.0.20231215091746-d23a82b3a2f5
 	github.com/crossplane/function-sdk-go v0.2.0
 	github.com/ghodss/yaml v1.0.0
