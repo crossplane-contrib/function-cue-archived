@@ -1,3 +1,7 @@
+# Notice
+
+This repo is Deprecated and will be merging with https://github.com/elastic/crossplane-function-cue.  It is recommended that if you are using this repo to move to the elastic repository until it is migrated into this repo
+
 # function-cue
 
 A [cuelang](https://cuelang.org/) integration for Crossplane's [Composition Functions](https://docs.crossplane.io/latest/concepts/composition-functions/).
