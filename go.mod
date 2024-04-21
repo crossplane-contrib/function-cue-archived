@@ -2,7 +2,7 @@ module github.com/crossplane-contrib/function-cue
 
 go 1.21
 
-toolchain go1.21.3
+toolchain go1.22.2
 
 require (
 	cuelang.org/go v0.7.0
